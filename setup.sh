@@ -54,8 +54,10 @@ install_tarball() {
     download_tarball $1 $2 $3
     echo "Installing $3..."
 	cd $3
-    echo "Configuring..."
-	./configure >/dev/null
+    if [ ! -f already_configured ]; then
+        echo "Configuring..."
+    	./configure >/dev/null && touch already_configured
+    fi
     echo "Building..."
 	make >/dev/null
     echo "Installing files..."
