@@ -3,7 +3,7 @@
 HOME=/home/project3
 USERNAME=project3
 
-PACKAGES=(gcc-c++ git wget vim tmux kernel-modules-extra tar python-matplotlib)
+PACKAGES=(gcc-c++ git curl vim tmux kernel-modules-extra tar python-matplotlib)
 
 STARTER_REPO="https://github.com/letitz/bitrate-project-starter.git"
 STARTER_REPO_DIR="bitrate-project-starter"
@@ -42,7 +42,7 @@ download_tarball() {
     cd $HOME
     if [ ! -f $2 ]; then
         echo "Downloading $2..."
-        wget $1 -O $2 >/dev/null
+        curl -# $1 -o $2
     fi
     if [ ! -d $3 ]; then
         echo "Extracting $3..."
