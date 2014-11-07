@@ -82,8 +82,8 @@ fi
 echo "Enabling RPMFusion free repository..."
 yum localinstall -y --nogpgcheck $RPMFUSION_FREE_RPM >/dev/null
 
-echo "Updating packages..."
-yum -y update
+echo "Updating packages, this may take a while..."
+yum -y update >/dev/null
 
 # Install packages
 echo "Installing packages..."
