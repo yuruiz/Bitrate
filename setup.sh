@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 HOME=/home/project3
 USERNAME=project3
@@ -40,12 +40,23 @@ APACHE_MODULES_DIR=/usr/local/apache2/modules
 
 download_tarball() {
     cd $HOME
-    [ -f $2 ] || wget $1 -O $2
-    [ -d $3 ] || tar -xf $2
+    if [ ! -f $2 ]; then
+        echo "Downloading $2..."
+        wget $1 -O $2 >/dev/null
+    else
+        echo "Already have $2, skipping download..."
+    fi
+    if [ ! -d $3 ]; then
+        echo "Extracting $3..."
+        tar -xf $2
+    else
+        echo "Already have $3, skipping extraction..."
+    fi
 }
 
 install_tarball() {
     download_tarball $1 $2 $3
+    echo "Installing $3"
 	cd $3
 	./configure
 	make
@@ -69,15 +80,13 @@ echo "Installing packages..."
 yum install ${PACKAGES[*]}
 
 # Removing fedora firewall
-echo "removing fedora firewall"
+echo "Removing fedora firewall..."
 yum remove firewalld
 
 # Install Click 2.0.1
-echo "Installing click..."
 install_tarball $CLICK_DOWNLOAD $CLICK_TARBALL $CLICK_SRC_DIR
 
 # Install Apache 2.2.5
-echo "Installing apache..."
 install_tarball $APACHE_DOWNLOAD $APACHE_TARBALL $APACHE_SRC_DIR
 
 ## Update Firefox
