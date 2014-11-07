@@ -1,25 +1,28 @@
 #! /bin/bash
 
-HOME=/home/proj3
-USERNAME=proj3
+HOME=/home/project3
+USERNAME=project3
 
 PACKAGES=(gcc-c++ git wget vim tmux kernel-modules-extra tar python-matplotlib)
 
-STARTER_REPO="https://github.com/dtnaylor/bitrate-project-starter.git"
+STARTER_REPO="https://github.com/letitz/bitrate-project-starter.git"
+
+APACHE_DOWNLOAD="http://mirror.sonic.net/apache//httpd/httpd-2.2.29.tar.gz"
+APACHE_TARBALL="httpd-2.2.29.tar.gz"
+APACHE_SRC_DIR="httpd-2.2.29"
+
+CLICK_DOWNLOAD="http://www.read.cs.ucla.edu/click/click-2.0.1.tar.gz"
+CLICK_TARBALL="click-2.0.1.tar.gz"
+CLICK_SRC_DIR="click-2.0.1"
 
 WWW_DOWNLOAD="http://gs11697.sp.cs.cmu.edu:15441/www.tar.gz"
 WWW_TARBALL="www.tar.gz"
 WWW_SRC_DIR="www"
 
-CLICK_DOWNLOAD="http://www.read.cs.ucla.edu/click/click-2.0.1.tar.gz"
-CLICK_TARBALL="click-2.0.1.tar.gz"
-CLICK_SRC_DIR="click-2.0.1"
-APACHE_DOWNLOAD="http://apache.mirrors.pair.com//httpd/httpd-2.2.25.tar.gz"
-APACHE_TARBALL="httpd-2.2.25.tar.gz"
-APACHE_SRC_DIR="httpd-2.2.25"
 F4F_DOWNLOAD="http://gs11697.sp.cs.cmu.edu:15441/adobe_f4f_apache_module_4_5_1_linux_x64.tar.gz"
 F4F_TARBALL="adobe_f4f_apache_module_4_5_1_linux_x64.tar.gz"
 F4F_SRC_DIR="adobe_f4f_apache_module_4_5_1_linux_x64"
+
 F4F_CONF="LoadModule f4fhttp_module modules/mod_f4fhttp.so\n
 <IfModule f4fhttp_module>\n
 <Location /vod>\n
@@ -34,17 +37,19 @@ APACHE=/usr/local/apache2/bin/httpd
 APACHE_CONF_DIR=/usr/local/apache2/conf
 APACHE_MODULES_DIR=/usr/local/apache2/modules
 
+download_tarball() {
+    cd $HOME
+    [ -f $2 ] || wget $1 -O $2
+    [ -d $3 ] || tar -xf $2
+}
+
 install_tarball() {
-	cd $HOME
-	wget $1
-	tar -xzf $2
+    download_tarball $1 $2 $3
 	cd $3
 	./configure
 	make
 	make install
 }
-
-
 
 # Make sure only root can run our script
 if [[ $EUID -ne 0 ]]; then
@@ -60,10 +65,7 @@ fi
 
 # Install packages
 echo "Installing packages..."
-for package in ${PACKAGES[*]}
-do
-	yum install $package
-done
+yum install ${PACKAGES[*]}
 
 # Removing fedora firewall
 echo "removing fedora firewall"
@@ -90,9 +92,7 @@ install_tarball $APACHE_DOWNLOAD $APACHE_TARBALL $APACHE_SRC_DIR
 
 # Install Adobe f4f origin module for apache
 echo "Installing Adobe f4f origin module for apache..."
-cd $HOME
-wget $F4F_DOWNLOAD
-tar -xzf $F4F_TARBALL
+download_tarball $F4F_DOWNLOAD $F4F_TARBALL $F4F_SRC_DIR
 cp ./$F4F_SRC_DIR/* /$APACHE_MODULES_DIR
 if ! grep -q "f4f" $APACHE_CONF_DIR/httpd.conf
 then
@@ -101,9 +101,7 @@ fi
 
 # Copy www files to /var/www
 echo "Installing www files..."
-cd $HOME
-wget $WWW_DOWNLOAD
-tar -xzf $WWW_TARBALL
+download_tarball $WWW_DOWNLOAD $WWW_TARBALL $WWW_SRC_DIR
 mv $WWW_SRC_DIR /var/
 
 # Set permissions
@@ -118,6 +116,5 @@ chmod 777 $APACHE_CONF_DIR/httpd.conf
 echo "Cloning starter code..."
 cd $HOME
 sudo -u $USERNAME git clone $STARTER_REPO
-
 
 echo "Done."
