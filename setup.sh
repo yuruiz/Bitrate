@@ -43,14 +43,10 @@ download_tarball() {
     if [ ! -f $2 ]; then
         echo "Downloading $2..."
         wget $1 -O $2 >/dev/null
-    else
-        echo "Already have $2, skipping download..."
     fi
     if [ ! -d $3 ]; then
         echo "Extracting $3..."
         tar -xf $2
-    else
-        echo "Already have $3, skipping extraction..."
     fi
 }
 
@@ -114,12 +110,14 @@ if ! grep -q "f4f" $APACHE_CONF_DIR/httpd.conf
 then
     echo -e $F4F_CONF >> $APACHE_CONF_DIR/httpd.conf
 fi
+echo
 
 # Copy www files to /var/www
 echo "Installing www files..."
 download_tarball $WWW_DOWNLOAD $WWW_TARBALL $WWW_SRC_DIR
 rm -rf /var/www
 mv $WWW_SRC_DIR /var/www
+echo
 
 # Set permissions
 echo "Setting file permissions..."
