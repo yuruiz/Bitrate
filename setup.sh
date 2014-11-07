@@ -3,7 +3,9 @@
 HOME=/home/project3
 USERNAME=project3
 
-PACKAGES=(gcc-c++ git curl vim tmux kernel-modules-extra tar python-matplotlib)
+RPMFUSION_RPM="http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
+
+PACKAGES=(gcc-c++ git curl vim tmux kernel-modules-extra tar python-matplotlib kmod-VirtualBox VirtualBox-guest)
 
 STARTER_REPO="https://github.com/letitz/bitrate-project-starter.git"
 STARTER_REPO_DIR="bitrate-project-starter"
@@ -76,6 +78,13 @@ if [ ! -d "$HOME" ]; then
 	exit 1
 fi
 
+# Enable RPMFusion free repo for virtualbox guest additions
+echo "Enabling RPMFusion free repository..."
+yum localinstall -y --nogpgcheck $RPMFUSION_FREE_RPM >/dev/null
+
+echo "Updating packages..."
+yum -y update
+
 # Install packages
 echo "Installing packages..."
 yum install -y ${PACKAGES[*]} >/dev/null
@@ -141,3 +150,9 @@ else
 fi
 
 echo "Done."
+echo -n "Rebooting is recommended. Do you wish to reboot now? [Y/n]"
+read do_reboot
+if [ "$do_reboot" == "Y" ]; then
+    echo "Rebooting..."
+    reboot
+fi
