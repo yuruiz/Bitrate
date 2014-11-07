@@ -7,7 +7,7 @@ PACKAGES=(gcc-c++ git wget vim tmux kernel-modules-extra tar python-matplotlib)
 
 STARTER_REPO="https://github.com/letitz/bitrate-project-starter.git"
 
-APACHE_DOWNLOAD="http://mirror.sonic.net/apache//httpd/httpd-2.2.29.tar.gz"
+APACHE_DOWNLOAD="http://mirrors.sonic.net/apache//httpd/httpd-2.2.29.tar.gz"
 APACHE_TARBALL="httpd-2.2.29.tar.gz"
 APACHE_SRC_DIR="httpd-2.2.29"
 
