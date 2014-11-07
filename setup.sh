@@ -56,11 +56,14 @@ download_tarball() {
 
 install_tarball() {
     download_tarball $1 $2 $3
-    echo "Installing $3"
+    echo "Installing $3..."
 	cd $3
-	./configure
-	make
-	make install
+    echo "Configuring..."
+	./configure >/dev/null
+    echo "Building..."
+	make >/dev/null
+    echo "Installing files..."
+	make install >/dev/null
 }
 
 # Make sure only root can run our script
@@ -112,7 +115,7 @@ fi
 # Copy www files to /var/www
 echo "Installing www files..."
 download_tarball $WWW_DOWNLOAD $WWW_TARBALL $WWW_SRC_DIR
-mv $WWW_SRC_DIR /var/
+mv -f $WWW_SRC_DIR /var/
 
 # Set permissions
 echo "Setting file permissions..."
