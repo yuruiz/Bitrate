@@ -80,17 +80,20 @@ fi
 
 # Install packages
 echo "Installing packages..."
-yum install ${PACKAGES[*]}
+yum install -y ${PACKAGES[*]} >/dev/null
 
 # Removing fedora firewall
 echo "Removing fedora firewall..."
-yum remove firewalld
+yum remove -y firewalld >/dev/null
+echo
 
 # Install Click 2.0.1
 install_tarball $CLICK_DOWNLOAD $CLICK_TARBALL $CLICK_SRC_DIR
+echo
 
 # Install Apache 2.2.5
 install_tarball $APACHE_DOWNLOAD $APACHE_TARBALL $APACHE_SRC_DIR
+echo
 
 ## Update Firefox
 #echo "Updating Firefox..."
@@ -115,7 +118,8 @@ fi
 # Copy www files to /var/www
 echo "Installing www files..."
 download_tarball $WWW_DOWNLOAD $WWW_TARBALL $WWW_SRC_DIR
-mv -f $WWW_SRC_DIR /var/
+rm -rf /var/www
+mv $WWW_SRC_DIR /var/www
 
 # Set permissions
 echo "Setting file permissions..."
