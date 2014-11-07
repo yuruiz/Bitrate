@@ -6,6 +6,7 @@ USERNAME=project3
 PACKAGES=(gcc-c++ git wget vim tmux kernel-modules-extra tar python-matplotlib)
 
 STARTER_REPO="https://github.com/letitz/bitrate-project-starter.git"
+STARTER_REPO_DIR="bitrate-project-starter"
 
 APACHE_DOWNLOAD="http://mirrors.sonic.net/apache//httpd/httpd-2.2.29.tar.gz"
 APACHE_TARBALL="httpd-2.2.29.tar.gz"
@@ -113,8 +114,14 @@ chmod 777 $APACHE_CONF_DIR
 chmod 777 $APACHE_CONF_DIR/httpd.conf
 
 # Clone starter code
-echo "Cloning starter code..."
 cd $HOME
-sudo -u $USERNAME git clone $STARTER_REPO
+if [ ! -d $STARTER_REPO_DIR ]; then
+    echo "Cloning starter code..."
+    sudo -u $USERNAME git clone $STARTER_REPO >/dev/null
+else
+    echo "Pulling last starter code..."
+    cd $STARTER_REPO_DIR
+    git pull >/dev/null
+fi
 
 echo "Done."
