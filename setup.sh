@@ -87,6 +87,11 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+if [ -z "$1" ]; then
+    echo "USAGE: $0 <YOUR_ANDREW_USERNAME>"
+    exit 1
+fi
+
 # Make sure user's home dir exists where we think it does
 if [ ! -d "$HOME" ]; then
 	echo "Could not find home directory: $HOME"
