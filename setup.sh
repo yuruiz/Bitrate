@@ -5,7 +5,7 @@ ANDREW_USERNAME=$1
 HOME=/home/project3
 USERNAME=project3
 
-RPMFUSION_RPM="http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
+RPMFUSION_FREE_RPM="http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
 
 PACKAGES=(gcc-c++ git curl vim tmux kernel-modules-extra tar python-matplotlib kmod-VirtualBox VirtualBox-guest)
 
