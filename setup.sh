@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ANDREW_USERNAME=$1
+
 HOME=/home/project3
 USERNAME=project3
 
@@ -18,11 +20,11 @@ CLICK_DOWNLOAD="http://www.read.cs.ucla.edu/click/click-2.0.1.tar.gz"
 CLICK_TARBALL="click-2.0.1.tar.gz"
 CLICK_SRC_DIR="click-2.0.1"
 
-WWW_DOWNLOAD="http://gs11697.sp.cs.cmu.edu:15441/www.tar.gz"
+AFS_DIR="/afs/andrew.cmu.edu/usr/trigoudy/15441-p3"
+
 WWW_TARBALL="www.tar.gz"
 WWW_SRC_DIR="www"
 
-F4F_DOWNLOAD="http://gs11697.sp.cs.cmu.edu:15441/adobe_f4f_apache_module_4_5_1_linux_x64.tar.gz"
 F4F_TARBALL="adobe_f4f_apache_module_4_5_1_linux_x64.tar.gz"
 F4F_SRC_DIR="adobe_f4f_apache_module_4_5_1_linux_x64"
 
@@ -40,20 +42,33 @@ APACHE=/usr/local/apache2/bin/httpd
 APACHE_CONF_DIR=/usr/local/apache2/conf
 APACHE_MODULES_DIR=/usr/local/apache2/modules
 
+extract_tarball() {
+    cd $HOME
+    if [ ! -d $2 ]; then
+        echo "Extracting $2..."
+        tar -xf $1
+    fi
+}
+
 download_tarball() {
     cd $HOME
     if [ ! -f $2 ]; then
         echo "Downloading $2..."
         curl -# $1 -o $2
     fi
-    if [ ! -d $3 ]; then
-        echo "Extracting $3..."
-        tar -xf $2
+}
+
+scp_tarball() {
+    cd $HOME
+    if [ ! -f $2 ]; then
+        echo "Scping $1..."
+        scp "$ANDREW_USERNAME@unix.andrew.cmu.edu:$AFS_DIR/$1" ./
     fi
 }
 
 install_tarball() {
-    download_tarball $1 $2 $3
+    download_tarball $1 $2
+    extract_tarball $2 $3
     echo "Installing $3..."
 	cd $3
     if [ ! -f already_configured ]; then
@@ -115,7 +130,8 @@ echo
 
 # Install Adobe f4f origin module for apache
 echo "Installing Adobe f4f origin module for apache..."
-download_tarball $F4F_DOWNLOAD $F4F_TARBALL $F4F_SRC_DIR
+scp_tarball $F4F_TARBALL
+extract_tarball $F4F_TARBALL $F4F_SRC_DIR
 cp ./$F4F_SRC_DIR/* /$APACHE_MODULES_DIR
 if ! grep -q "f4f" $APACHE_CONF_DIR/httpd.conf
 then
@@ -125,7 +141,8 @@ echo
 
 # Copy www files to /var/www
 echo "Installing www files..."
-download_tarball $WWW_DOWNLOAD $WWW_TARBALL $WWW_SRC_DIR
+scp_tarball $WWW_TARBALL
+extract_tarball $WWW_TARBALL $WWW_SRC_DIR
 rm -rf /var/www
 mv $WWW_SRC_DIR /var/www
 echo
