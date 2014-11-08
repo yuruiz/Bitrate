@@ -60,7 +60,7 @@ download_tarball() {
 
 scp_tarball() {
     cd $HOME
-    if [ ! -f $2 ]; then
+    if [ ! -f $1 ]; then
         echo "Scping $1..."
         scp "$ANDREW_USERNAME@unix.andrew.cmu.edu:$AFS_DIR/$1" ./
     fi
