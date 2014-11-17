@@ -1,3 +1,4 @@
+#include <sys/socket.h>
 #include "io.h"
 
 static char *_lock_file;
@@ -42,7 +43,7 @@ int httpreadline(int fd, char *buf, int size) {
     for (i = 1; i < size; i++) {
         char c;
         ssize_t rc;
-        if ((rc = read(fd, &c, 1)) == 1) {
+        if ((rc = recv(fd, &c, 1, MSG_DONTWAIT)) == 1) {
             *buf++ = c;
             if (c == '\n') {
                 break;

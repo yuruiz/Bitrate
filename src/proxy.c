@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <tk.h>
 #include "log.h"
 #include "conn.h"
 #include "socket.h"
@@ -40,12 +39,14 @@ int main(int argc, char *argv[]) {
 
 
     if ((http_listen_socket = open_port(http_port, &http_addr)) == -1) {
+        printf("Open port failed\n");
         return EXIT_FAILURE;
     }
 
     init_pool(http_listen_socket, &conn_pool);
 
     do {
+        printf("Pool start\n");
         conn_pool.ready_set = conn_pool.read_set;
         conn_pool.nconn = select(conn_pool.maxfd + 1, &conn_pool.ready_set, NULL, NULL, NULL);
         conn_size = sizeof(cli_addr);
