@@ -38,8 +38,9 @@ typedef struct _hdNode{
 } hdNode;
 
 typedef struct _conn_node{
-    int connfd;
-    char* addr;
+    int clientfd;
+    int serverfd;
+    char*clientaddr;
     struct _conn_node* prev;
     struct _conn_node* next;
 }conn_node;

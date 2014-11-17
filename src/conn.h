@@ -6,7 +6,6 @@
 #include <openssl/err.h>
 #include <arpa/inet.h>
 #include "parse.h"
-#include "response.h"
 
 typedef struct {
     int maxfd;            // record the file descriptor with highest index

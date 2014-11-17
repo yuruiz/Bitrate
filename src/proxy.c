@@ -34,7 +34,6 @@ int main(int argc, char *argv[]) {
         www_ip = argv[7];
     }
 
-
     loginit(log_file);
 
     printf("-------------------Server Start------------------\n");
@@ -55,7 +54,7 @@ int main(int argc, char *argv[]) {
             printf("Adding new http connection\n");
             if ((http_client_sock = accept(http_listen_socket, (struct sockaddr *) &cli_addr, &conn_size)) == -1) {
                 printf("Error accepting http connection.\n");
-                break;
+                continue;
             }
             add_conn(http_client_sock, &conn_pool, &cli_addr);
         }

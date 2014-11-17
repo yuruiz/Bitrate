@@ -22,12 +22,12 @@ char *getValueByKey(hdNode *head, char *key) {
 }
 
 static int readline(conn_node *node, char *buf, int length) {
-    return httpreadline(node->connfd, buf, length);
+    return httpreadline(node->clientfd, buf, length);
 }
 
 static int readblock(conn_node *node, char *buf, int length) {
 
-    return (int) read(node->connfd, buf, length);
+    return (int) read(node->clientfd, buf, length);
 }
 
 hdNode *newNode(char *key, char *value) {
@@ -73,7 +73,7 @@ int parseRequest(conn_node *node, response_t *resp) {
             resp->error = true;
             resp->status = INTERNAL_SERVER_ERROR;
             resp->conn_close = true;
-            logging("Can not read from socket %d\n", node->connfd);
+            logging("Can not read from socket %d\n", node->clientfd);
             logging("%s", strerror(errno));
             return -1;
         }
