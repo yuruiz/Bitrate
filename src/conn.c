@@ -1,16 +1,17 @@
 #include <netdb.h>
 #include <sndfile.h>
 #include "conn.h"
+#include "mydns.h"
+#include "proxy.h"
+#include "response.h"
+#include "bitrate.h"
 
-#define MAXLINE 8192
-#define MAXBUF 8192
 
 void init_pool(int http_fd, pool *p) {
 
     p->list_head = NULL;
     p->list_tail = NULL;
-    p->cgi_head  = NULL;
-    p->cgi_tail  = NULL;
+
 
     FD_ZERO(&p->ready_set);
     FD_ZERO(&p->read_set);
@@ -20,14 +21,12 @@ void init_pool(int http_fd, pool *p) {
 }
 
 void remove_node(conn_node *node, pool *p) {
+    freequeue(node->reqq);
     if (node->prev != NULL) {
         node->prev->next = node->next;
     }
     else {
         p->list_head = node->next;
-        if (node->next != NULL) {
-            node->next->prev = NULL;
-        }
     }
 
     if (node->next != NULL) {
@@ -35,30 +34,15 @@ void remove_node(conn_node *node, pool *p) {
     }
     else {
         p->list_tail = node->prev;
-        if (node->prev != NULL) {
-            node->prev->next = NULL;
-        }
     }
 
     free(node);
-}
-
-void freelist(hdNode *head) {
-    hdNode *prev = head;
-    hdNode *cur  = head;
-
-    while (cur != NULL) {
-        cur = cur->next;
-        free(prev);
-        prev = cur;
-    }
 }
 
 int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     p->nconn--;
 
     if (p->ndp == FD_SETSIZE) {
-        logging("add_conn error: Too many clients");
         return -1;
     }
 
@@ -72,11 +56,12 @@ int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
 
     conn_node *new_node = malloc(sizeof(conn_node));
 
-    new_node->clientfd   = connfd;
-    new_node->serverfd   = -1;
+    new_node->clientfd = connfd;
+    new_node->serverfd = -1;
     new_node->clientaddr = inet_ntoa(cli_addr->sin_addr);
-    new_node->prev       = NULL;
-    new_node->next       = NULL;
+    new_node->prev = NULL;
+    new_node->next = NULL;
+    new_node->reqq = newqueue();
 
     if (p->list_head == NULL) {
         p->list_head = new_node;
@@ -84,112 +69,123 @@ int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     }
     else {
         p->list_tail->next = new_node;
-        new_node->prev     = p->list_tail;
-        p->list_tail       = new_node;
+        new_node->prev = p->list_tail;
+        p->list_tail = new_node;
     }
 
     return 0;
 }
 
-int open_clientfd_r(char *hostname, char *port) {
-    int clientfd;
-    struct addrinfo *addlist, *p;
-    int rv;
 
-    /* Create the socket descriptor */
-    if ((clientfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("cannot open the socket\n");
-        return -1;
-    }
+void initReqStatus(req_status *reqStatus){
+    reqStatus->frag = 0;
+    reqStatus->seg = 0;
+    reqStatus->bitrate = 0;
+    reqStatus->method = NOT_SUPPORT;
+    reqStatus->reqtype = OTHER;
+    reqStatus->connclose = false;
+    reqStatus->resloc = NULL;
 
-    /* Get a list of addrinfo structs */
-    if ((rv = getaddrinfo(hostname, port, NULL, &addlist)) != 0) {
-        printf("%s %s\n", hostname, gai_strerror(rv));
-        return -2;
-    }
+    memset(reqStatus->uri, 0, MAXLINE);
+    memset(reqStatus->version, 0, MAXLINE);
 
-    //todo set fake ip
+    return;
+}
 
-    /* Walk the list, using each addrinfo to try to connect */
-    for (p = addlist; p; p = p->ai_next) {
-        if (p->ai_family == AF_INET) {
-            if (connect(clientfd, p->ai_addr, p->ai_addrlen) == 0) {
-                break; /* success */
-            }
-        }
-    }
+void initResStatus(res_status *resStatus){
+    resStatus->contentlen = 0;
+    resStatus->content = NULL;
 
-    /* Clean up */
-    freeaddrinfo(addlist);
-    if (!p) { /* all connects failed */
-        close(clientfd);
-        return -1;
-    }
-    else { /* one of the connects succeeded */
-        return clientfd;
-    }
+    memset(resStatus->buf, 0, MAXLINE);
 }
 
 
-static int parse_uri(char *uri, char *host, char *port, char *path) {
+int openserverfd(conn_node* node) {
 
-    char tempath[MAXLINE];
-    memset(tempath, 0, MAXLINE);
-    memset(host, 0, MAXLINE);
-    memset(path, 0, MAXLINE);
-    memset(port, 0, MAXLINE);
+    int server_fd;
+    struct addrinfo *server_info;
+    struct sockaddr_in addr;
+    char *fake_ip, *www_ip;
+    unsigned short rand_port = 0;
 
-    int temport = 0;
-    int status  = 0;
+    fake_ip = getfakeip();
+    www_ip = getwwwip();
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr(fake_ip);
+    addr.sin_port = htons(rand_port);
 
-    strcpy(path, "/");
 
-    if (strstr(uri, "http://")) {
-        if (sscanf(uri, "http://%8192[^:]:%i/%8192[^\n]", host, &temport, tempath) == 3) {status = 1;}
-        else
-            if (sscanf(uri, "http://%8192[^/]/%8192[^\n]", host, tempath) == 2) {status = 2;}
-            else
-                if (sscanf(uri, "http://%8192[^:]:%i[^\n]", host, &temport) == 2) {status = 3;}
-                else if (sscanf(uri, "http://%8192[^/]", host) == 1) {status = 4;}
-
-        strcat(path, tempath);
+    if (www_ip == NULL) {
+//        if (resolve("video.cs.cmu.edu", "8080", NULL, &server_info) != 0) {
+//            fprintf(stderr, "getaddrinfo error in proxy_process\n");
+//            exit(-1);
+//        }
+        return -1;
+    } else {
+        char *server_ip = www_ip;
+        char *server_port = "8080";
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = AI_PASSIVE;
+        if (getaddrinfo(server_ip, server_port, &hints, &server_info) != 0) {
+            fprintf(stderr, "getaddrinfo error\n");
+            return -1;
+        }
     }
-    else {
-        strcpy(path, uri);
+
+    if ((server_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol)) == -1) {
+        fprintf(stderr, "Socket failed\n");
+        return -1;
     }
 
-    if (temport != 0) {sprintf(port, "%d", temport);}
-    else {strcpy(port, "80");}
+    if (bind(server_fd, (struct sockaddr *) &addr, sizeof(addr))) {
+        fprintf(stderr, "Failed binding socket\n");
+        return -1;
+    }
 
+    if (connect(server_fd, server_info->ai_addr, server_info->ai_addrlen)) {
+        fprintf(stderr, "Connect failed\n");
+        return -1;
+    }
 
-    return status;
+    struct sockaddr_in tmpaddr =  *((struct sockaddr_in*)server_info->ai_addr);
+    char* serverIP = inet_ntoa(tmpaddr.sin_addr);
+    memset(node->serveraddr, 0, MINLINE);
+    strcpy(node->serveraddr, serverIP);
+
+    /* Clean up */
+    freeaddrinfo(server_info);
+
+    return server_fd;
 }
 
 
 int sendtoServer(conn_node *cur_node, pool *p) {
-    ssize_t object_size = 0;
-    char    buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE], dest_port[MAXLINE], dest_host[MAXLINE], path[MAXLINE];
+    char buf[MAXLINE];
+    req_status reqStatus;
 
     printf("Start sending request to server\n");
+
+    initReqStatus(&reqStatus);
+
     /* Read request line and headers */
     if (httpreadline(cur_node->clientfd, buf, MAXLINE) < 0) {
         printf("Cannot read content from ");
         return -1;
     }
 
-    memset(method, 0, MAXLINE);
-    memset(path, 0, MAXLINE);
-    memset(uri, 0, MAXLINE);
-    memset(version, 0, MAXLINE);
+    /*parse the request line*/
+    if (parse_uri(buf, &reqStatus) < 0) {
+        printf("Parse the request error\n");
+        printf("%s\n", buf);
+        return -1;
+    }
 
-    sscanf(buf, "%s %s %s", method, uri, version);
-
-    printf("%s", buf);
-
-    parse_uri(uri, dest_host, dest_port, path);
-
+    /*create the server socket if it has not been created*/
     if (cur_node->serverfd < 0) {
-        if ((cur_node->serverfd = open_clientfd_r(dest_host, dest_port)) <= 0) {
+        if ((cur_node->serverfd = openserverfd(cur_node)) <= 0) {
             printf("Create connection to server failed\n");
             return -1;
         }
@@ -198,28 +194,11 @@ int sendtoServer(conn_node *cur_node, pool *p) {
         if (cur_node->serverfd > p->maxfd) {
             p->maxfd = cur_node->serverfd;
         }
-        printf("Adding server port %s at fd %d\n", dest_port, cur_node->serverfd);
+        printf("Adding server at fd %d\n", cur_node->serverfd);
     }
 
-
-    memset(buf, 0, MAXLINE);
-
-    sprintf(buf, "%s %s %s\r\n", method, path, version);
-    write(cur_node->serverfd, buf, strlen(buf));
-    printf("%s", buf);
-
-    memset(buf, 0, MAXLINE);
-
-    int n;
-    while ((n = httpreadline(cur_node->clientfd, buf, MAXLINE)) > 0) {
-        write(cur_node->serverfd, buf, n);
-        printf("%s", buf);
-        if (!strcmp(buf, "\r\n")) {
-            break;
-        }
-    }
-
-    if (n == 0) {
+    /*send the request to server*/
+    if (sendRequset(cur_node, &reqStatus) < 0) {
         close(cur_node->clientfd);
         FD_CLR(cur_node->clientfd, &p->read_set);
         if (cur_node->serverfd > 0) {
@@ -228,7 +207,6 @@ int sendtoServer(conn_node *cur_node, pool *p) {
         }
 
         return -1;
-
     }
 
     printf("Sending request to server finished\n");
@@ -238,17 +216,82 @@ int sendtoServer(conn_node *cur_node, pool *p) {
 
 }
 
-void sendtoClient(conn_node *cur_node) {
+int sendtoClient(conn_node *cur_node,  pool *p) {
 
-    printf("Now send to client\n");
-    ssize_t content_size = 0;
-    char content[MAXLINE];
-    memset(content, 0, MAXLINE);
+    res_status resStatus;
+    int hdsize = 0;
 
-    while ((content_size = recv(cur_node->serverfd, content, MAXLINE, MSG_DONTWAIT)) > 0) {
-        write(cur_node->clientfd, content, content_size);
-        printf("%s", content);
+    printf("Start sending response to client\n");
+
+    initResStatus(&resStatus);
+
+    /*Parse the response header*/
+    if((hdsize = parseServerHd(cur_node, &resStatus)) < 0) {
+        if (resStatus.content != NULL) {
+            free(resStatus.content);
+            close(cur_node->clientfd);
+            FD_CLR(cur_node->clientfd, &p->read_set);
+            close(cur_node->serverfd);
+            FD_CLR(cur_node->serverfd, &p->read_set);
+            return -1;
+        }
     }
+
+    /*send the response header to client*/
+    write(cur_node->clientfd, resStatus.buf, hdsize);
+
+    /*read the response content*/
+    if(write(cur_node->serverfd, resStatus.content, resStatus.contentlen) != resStatus.contentlen){
+        free(resStatus.content);
+        close(cur_node->clientfd);
+        FD_CLR(cur_node->clientfd, &p->read_set);
+        close(cur_node->serverfd);
+        FD_CLR(cur_node->serverfd, &p->read_set);
+        return -1;
+    }
+
+    /*parse the response content*/
+    req_t* req = (req_t*)dequeue(cur_node->reqq);
+    if (req == NULL) {
+        printf("ERROR! reqest records empty!\n ");
+        free(resStatus.content);
+        close(cur_node->clientfd);
+        FD_CLR(cur_node->clientfd, &p->read_set);
+        close(cur_node->serverfd);
+        FD_CLR(cur_node->serverfd, &p->read_set);
+        return -1;
+    }
+
+    ssize_t writelen;
+    struct timeval curT;
+    switch (req->reqtype) {
+        case MANIFEST:
+            //todo update manifest
+            break;
+        case VIDEO:
+            gettimeofday(&curT, NULL);
+            updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000, (int)resStatus.contentlen, req->bitrate,req->chunkname, cur_node->serveraddr);
+        case OTHER:
+            writelen = write(cur_node->clientfd, resStatus.content, resStatus.contentlen);
+            break;
+        default:
+            printf("Error! unknow request record\n");
+            return -1;
+    }
+
+    if (req->reqtype != MANIFEST && writelen != resStatus.contentlen) {
+        free(resStatus.content);
+        close(cur_node->clientfd);
+        FD_CLR(cur_node->clientfd, &p->read_set);
+        close(cur_node->serverfd);
+        FD_CLR(cur_node->serverfd, &p->read_set);
+        return -1;
+    }
+
+
+    free(resStatus.content);
+
+    return 0;
 
 }
 
@@ -263,15 +306,22 @@ void conn_handle(pool *p) {
 
         if (cur_node->serverfd > 0 && FD_ISSET(cur_node->serverfd, &p->ready_set)) {
             p->nconn--;
-            sendtoClient(cur_node);
+
+            if (sendtoClient(cur_node, p) < 0) {
+                conn_node *temp = cur_node;
+                cur_node = cur_node->next;
+                remove_node(temp, p);
+                continue;
+            }
         }
 
         if (FD_ISSET(cur_node->clientfd, &p->ready_set)) {
             p->nconn--;
-            if(sendtoServer(cur_node, p) < 0){
-                conn_node* temp = cur_node;
+            if (sendtoServer(cur_node, p) < 0) {
+                conn_node *temp = cur_node;
                 cur_node = cur_node->next;
                 remove_node(temp, p);
+                continue;
             }
         }
         cur_node = cur_node->next;

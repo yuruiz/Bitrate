@@ -1,12 +1,10 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include <sys/fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 
 void loginit(char *logfile);
-void logging(const char *format, ...);
+void logging(float duration, float tput, float avg_tput, int bitrate, char *client_ip, char *chunkname);
 //int getlogfd();
 #endif

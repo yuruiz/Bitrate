@@ -5,13 +5,30 @@
 #include "log.h"
 #include "conn.h"
 #include "socket.h"
+#include "parse.h"
 
+
+static char* fake_ip = NULL;
+static char* www_ip = NULL;
+static double alpha;
 
 #define USAGE "Usage: %s <log> <alpha> <listen-port> <fake-ip> <dns-ip> <dns-port> [<www-ip>]\n"
 
+char* getfakeip(){
+    return fake_ip;
+}
+
+char* getwwwip(){
+    return www_ip;
+}
+
+double getAlpha(){
+    return alpha;
+}
+
 int main(int argc, char *argv[]) {
-    int http_port, alpha;
-    char *log_file, *fake_ip, *dns_ip, *dns_port, *www_ip;
+    int http_port;
+    char *log_file, *dns_ip, *dns_port;
     int http_listen_socket, http_client_sock;
     struct sockaddr_in http_addr, cli_addr;
     socklen_t conn_size;
@@ -23,7 +40,7 @@ int main(int argc, char *argv[]) {
     }
 
     log_file = argv[1];
-    alpha = atoi(argv[2]);
+    alpha = atof(argv[2]);
     http_port = atoi(argv[3]);
     fake_ip = argv[4];
     dns_ip = argv[5];
