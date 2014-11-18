@@ -270,7 +270,8 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
             break;
         case VIDEO:
             gettimeofday(&curT, NULL);
-            updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000, (int)resStatus.contentlen, req->bitrate,req->chunkname, cur_node->serveraddr);
+            updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000,
+                    (int)resStatus.contentlen, req->bitrate,req->chunkname, cur_node->serveraddr);
         case OTHER:
             writelen = write(cur_node->clientfd, resStatus.content, resStatus.contentlen);
             break;
@@ -280,6 +281,7 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
     }
 
     if (req->reqtype != MANIFEST && writelen != resStatus.contentlen) {
+        free(req);
         free(resStatus.content);
         close(cur_node->clientfd);
         FD_CLR(cur_node->clientfd, &p->read_set);
@@ -288,7 +290,7 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
         return -1;
     }
 
-
+    free(req);
     free(resStatus.content);
 
     return 0;
