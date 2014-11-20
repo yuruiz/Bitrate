@@ -226,6 +226,7 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
 
     res_status resStatus;
     int hdsize = 0;
+    int n;
 
     printf("Start sending response to client\n");
 
@@ -236,6 +237,7 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
         if (resStatus.content != NULL) {
             free(resStatus.content);
         }
+        printf("Parse Response Header Error\n");
         return -1;
     }
 
@@ -243,8 +245,9 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
     write(cur_node->clientfd, resStatus.buf, hdsize);
 
     /*read the response content*/
-    if(read(cur_node->serverfd, resStatus.content, resStatus.contentlen) != resStatus.contentlen){
+    if((n = read(cur_node->serverfd, resStatus.content, resStatus.contentlen)) != resStatus.contentlen){
         free(resStatus.content);
+        printf("Read Response payload error %d\n", n);
         return -1;
     }
 
@@ -293,7 +296,7 @@ void conn_handle(pool *p) {
     conn_node *cur_node;
     cur_node = p->list_head;
 
-    printf("Start Connection Handling procedure\n");
+//    printf("Start Connection Handling procedure\n");
 
     /*Handle the http connections*/
     while (cur_node != NULL && p->nconn > 0) {
