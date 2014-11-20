@@ -185,7 +185,7 @@ int processReq(conn_node *cur_node, pool *p) {
     int n;
     req_status reqStatus;
 
-//    printf("Start sending request to server\n");
+    printf("Start sending request to server\n");
 
     initReqStatus(&reqStatus);
 
@@ -225,7 +225,7 @@ int processReq(conn_node *cur_node, pool *p) {
         return -1;
     }
 
-//    printf("Sending request to server finished\n");
+    printf("Sending request to server finished\n");
 
     return 0;
 
@@ -238,7 +238,7 @@ int processResp(conn_node *cur_node, pool *p) {
     ssize_t n;
 
     if (resStatus->curStatus == HEADER) {
-//        printf("Start processing response header\n");
+        printf("Start processing response header\n");
         /*Parse the response header*/
         if((resStatus->hdsize = parseServerHd(cur_node, resStatus)) <= 0) {
 
@@ -268,11 +268,11 @@ int processResp(conn_node *cur_node, pool *p) {
             }
         }
 
-//        printf("Processing response header finished\n");
+        printf("Processing response header finished\n");
     }else {
 
 
-//        printf("Start processing response payload\n");
+        printf("Start processing response payload\n");
 
         size_t left = resStatus->contentlen - resStatus->rec_len;
 
@@ -282,8 +282,6 @@ int processResp(conn_node *cur_node, pool *p) {
             printf("Read Response payload error %d\n", n);
             return -1;
         }
-
-//        printf("Read Payload finished\n");
 
         resStatus->rec_len += n;
 
@@ -300,9 +298,6 @@ int processResp(conn_node *cur_node, pool *p) {
             free(resStatus->content);
             return -1;
         }
-
-
-//        printf("Arbituating Response type\n");
 
         ssize_t writelen = 0;
         struct timeval curT;
@@ -343,7 +338,7 @@ int processResp(conn_node *cur_node, pool *p) {
 
         initResStatus(resStatus);
 
-//        printf("Processing response payload finished\n");
+        printf("Processing response payload finished\n");
     }
 
     return 0;
