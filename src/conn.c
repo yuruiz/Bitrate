@@ -182,11 +182,8 @@ int processReq(conn_node *cur_node, pool *p) {
     char* buf = cur_node->request_status.buf;
     char linebuf[MAXLINE];
     int n;
-    req_status reqStatus;
 
-    printf("Start sending request to server\n");
-
-    initReqStatus(&reqStatus);
+    printf("Start request processing\n");
 
     memset(linebuf, 0, MAXLINE);
 
@@ -216,9 +213,9 @@ int processReq(conn_node *cur_node, pool *p) {
 //    printf("%s", buf);
 
     /*parse the request line*/
-    if (parse_uri(buf, &reqStatus) < 0) {
+    if (parse_uri(buf, &cur_node->request_status) < 0) {
         printf("Parse the request error\n");
-        printf("%s\n", buf);
+        printf("%s", buf);
         return -1;
     }
 
@@ -237,9 +234,11 @@ int processReq(conn_node *cur_node, pool *p) {
     }
 
     /*send the request to server*/
-    if (sendRequset(cur_node, &reqStatus) < 0) {
+    if (sendRequset(cur_node, &cur_node->request_status) < 0) {
         return -1;
     }
+
+    initReqStatus(&cur_node->request_status);
 
     printf("Sending request to server finished\n");
 

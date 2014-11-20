@@ -11,11 +11,12 @@ int parse_uri(char* buf, req_status* req) {
     memset(req->uri, 0, MAXLINE);
     memset(linebuf, 0, MAXLINE);
 
-    bufreadline(buf, req->reqlen, linebuf, MAXLINE);
-
-    req->firstlen = strlen(linebuf);
+    req->firstlen = bufreadline(buf, req->reqlen, linebuf, MAXLINE);
 
     if (sscanf(linebuf, "%s %s %s", method, uri, req->version) != 3) {
+        printf("Parse request first line error\n");
+        printf("The line length is %d\n", req->firstlen);
+        printf("%s", linebuf);
         return -1;
     }
 
@@ -78,7 +79,8 @@ int parseServerHd(conn_node* node, res_status *resStatus){
         }
 
         strcat(resStatus->buf, linebuf);
-        if (strstr(linebuf, "\r\n\r\n") != NULL) {
+        if (strstr(resStatus->buf, "\r\n\r\n") != NULL) {
+            printf("Finishe reading response header\n");
             break;
         }
 
@@ -97,6 +99,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     if (linesize <= 0) {
         printf("Reading response error\n");
+        printf("%s", resStatus->buf);
         return linesize;
     }
 
