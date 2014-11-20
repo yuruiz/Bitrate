@@ -47,10 +47,10 @@ void updateBitrate(long long t1, long long t2, int len, int req_bitrate, char* c
         bitrate = bitrates[i];
     }
 
-    printf("Bit rate now %d\n", bitrate);
-    printf("The alpha is %f\n", alpha);
-    printf("The average throughput is %f\n", throughput);
-    printf("The current throughput is %f\n", t);
+//    printf("Bit rate now %d\n", bitrate);
+//    printf("The alpha is %f\n", alpha);
+//    printf("The average throughput is %f\n", throughput);
+//    printf("The current throughput is %f\n", t);
 
     logging((float) diff / 1000, (float) t / 1000, (float) throughput / 1000, req_bitrate, server_ip, chunkname);
 

@@ -185,7 +185,7 @@ int processReq(conn_node *cur_node, pool *p) {
     int n;
     req_status reqStatus;
 
-    printf("Start sending request to server\n");
+//    printf("Start sending request to server\n");
 
     initReqStatus(&reqStatus);
 
@@ -197,7 +197,7 @@ int processReq(conn_node *cur_node, pool *p) {
         return -1;
     }
 
-    printf("%s", buf);
+//    printf("%s", buf);
 
     /*parse the request line*/
     if (parse_uri(buf, &reqStatus) < 0) {
@@ -225,7 +225,7 @@ int processReq(conn_node *cur_node, pool *p) {
         return -1;
     }
 
-    printf("Sending request to server finished\n");
+//    printf("Sending request to server finished\n");
 
     return 0;
 
@@ -238,7 +238,7 @@ int processResp(conn_node *cur_node, pool *p) {
     ssize_t n;
 
     if (resStatus->curStatus == HEADER) {
-        printf("Start processing response header\n");
+//        printf("Start processing response header\n");
         /*Parse the response header*/
         if((resStatus->hdsize = parseServerHd(cur_node, resStatus)) <= 0) {
 
@@ -268,11 +268,11 @@ int processResp(conn_node *cur_node, pool *p) {
             }
         }
 
-        printf("Processing response header finished\n");
+//        printf("Processing response header finished\n");
     }else {
 
 
-        printf("Start processing response payload\n");
+//        printf("Start processing response payload\n");
 
         size_t left = resStatus->contentlen - resStatus->rec_len;
 
@@ -308,11 +308,11 @@ int processResp(conn_node *cur_node, pool *p) {
         struct timeval curT;
         switch (req->reqtype) {
             case MANIFEST:
-                printf("Manifest response received\n");
+//                printf("Manifest response received\n");
                 break;
             case VIDEO:
-                printf("Video response received\n");
-                printf("The content length is %d\n", resStatus->contentlen);
+//                printf("Video response received\n");
+//                printf("The content length is %d\n", resStatus->contentlen);
                 gettimeofday(&curT, NULL);
                 updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000,
                         (int) resStatus->contentlen, req->bitrate, req->chunkname, cur_node->serveraddr);
@@ -343,7 +343,7 @@ int processResp(conn_node *cur_node, pool *p) {
 
         initResStatus(resStatus);
 
-        printf("Processing response payload finished\n");
+//        printf("Processing response payload finished\n");
     }
 
     return 0;
@@ -358,7 +358,7 @@ void conn_handle(pool *p) {
     /*Handle the http connections*/
     while (cur_node != NULL && p->nconn > 0) {
 
-        printf("***********************************************************\n");
+//        printf("***********************************************************\n");
 
         if (cur_node->serverfd > 0 && FD_ISSET(cur_node->serverfd, &p->ready_set)) {
             p->nconn--;

@@ -36,14 +36,14 @@ int sendRequset(conn_node *node, req_status *reqStatus){
     reqRecord = malloc(sizeof(req_t));
     switch (reqStatus->reqtype) {
         case MANIFEST:
-            printf("Building manifest request\n");
+//            printf("Building manifest request\n");
             *(reqStatus->resloc) = 0;
             sprintf(req,"GET %sbig_buck_bunny_nolist.f4m %s",reqStatus->uri, reqStatus->version);
             sprintf(reqOrigin,"GET %sbig_buck_bunny.f4m %s",reqStatus->uri, reqStatus->version);
             reqRecord->reqtype = OTHER;
             break;
         case VIDEO:
-            printf("Building video request\n");
+//            printf("Building video request\n");
             *(reqStatus->resloc) = 0;
             sprintf(req,"GET %s%dSeg%d-Frag%d %s",reqStatus->uri, getBitrate(), reqStatus->seg, reqStatus->frag ,reqStatus->version);
             reqRecord->reqtype = VIDEO;
