@@ -25,7 +25,7 @@ void logging(float duration, float tput, float avg_tput, int bitrate, char *clie
 
     time_t timetmp = time(NULL);
 
-    fprintf(_logfd, "%d %.2f %.2f %.2f %d %s %s\n", (int) timetmp, duration, tput, avg_tput, bitrate, client_ip, chunkname);
+    fprintf(_logfd, "%d %.3f %.3f %.3f %d %s %s\n", (int) timetmp, duration, tput, avg_tput, bitrate, client_ip, chunkname);
     fflush(_logfd);
 
 }
