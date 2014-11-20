@@ -4,34 +4,14 @@
 #include "bitrate.h"
 
 int sendRequset(conn_node *node, req_status *reqStatus){
-    char header[MAXLINE];
     char req[MAXLINE];
     char reqOrigin[MAXLINE];
-    char buf[MAXLINE];
     req_t *reqRecord;
-    int n;
 
-    memset(header, 0, MAXLINE);
     memset(req, 0, MAXLINE);
     memset(reqOrigin, 0, MAXLINE);
-    memset(buf, 0, MAXLINE);
 
-    while ((n = httpreadline(node->clientfd, buf, MAXLINE)) > 0) {
-        strcat(header, buf);
-//        printf("%s", buf);
-
-        if(!strcmp(buf,"\r\n")){
-            break;
-        }
-
-        memset(buf, 0, MAXLINE);
-    }
-
-    if (n < 0) {
-        return -1;
-    } else if (n == 0) {
-        reqStatus->connclose = true;
-    }
+    char* header = reqStatus->buf + reqStatus->firstlen;
 
     reqRecord = malloc(sizeof(req_t));
     switch (reqStatus->reqtype) {
@@ -86,7 +66,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
 
     strcat(req,header);
 
-    int reqlen = strlen(req);
+    size_t reqlen = strlen(req);
 
     if (write(node->serverfd, req, reqlen) != reqlen) {
         printf("sending request error\n");

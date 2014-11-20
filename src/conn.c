@@ -39,6 +39,33 @@ void remove_node(conn_node *node, pool *p) {
     free(node);
 }
 
+void initReqStatus(req_status *reqStatus){
+    reqStatus->frag = 0;
+    reqStatus->seg = 0;
+    reqStatus->bitrate = 0;
+    reqStatus->method = NOT_SUPPORT;
+    reqStatus->reqtype = OTHER;
+    reqStatus->connclose = false;
+    reqStatus->resloc = NULL;
+    reqStatus->reqlen = 0;
+    reqStatus->firstlen = 0;
+
+    memset(reqStatus->uri, 0, MAXLINE);
+    memset(reqStatus->version, 0, MAXLINE);
+    memset(reqStatus->buf, 0, MAXLINE);
+    return;
+}
+
+void initResStatus(res_status *resStatus){
+    resStatus->contentlen = 0;
+    resStatus->rec_len = 0;
+    resStatus->curStatus = HEADER;
+    resStatus->content = NULL;
+    resStatus->hdsize = 0;
+
+    memset(resStatus->buf, 0, MAXLINE);
+}
+
 int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     p->nconn--;
 
@@ -62,13 +89,9 @@ int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     new_node->prev = NULL;
     new_node->next = NULL;
     new_node->reqq = newqueue();
-    new_node->response_status.contentlen = 0;
-    new_node->response_status.curStatus = HEADER;
-    new_node->response_status.content = NULL;
-    new_node->response_status.rec_len = 0;
-    new_node->response_status.hdsize = 0;
 
-    memset(new_node->response_status.buf, 0, MAXLINE);
+    initResStatus(&new_node->response_status);
+    initReqStatus(&new_node->request_status);
 
     if (p->list_head == NULL) {
         p->list_head = new_node;
@@ -81,32 +104,6 @@ int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     }
 
     return 0;
-}
-
-
-void initReqStatus(req_status *reqStatus){
-    reqStatus->frag = 0;
-    reqStatus->seg = 0;
-    reqStatus->bitrate = 0;
-    reqStatus->method = NOT_SUPPORT;
-    reqStatus->reqtype = OTHER;
-    reqStatus->connclose = false;
-    reqStatus->resloc = NULL;
-
-    memset(reqStatus->uri, 0, MAXLINE);
-    memset(reqStatus->version, 0, MAXLINE);
-
-    return;
-}
-
-void initResStatus(res_status *resStatus){
-    resStatus->contentlen = 0;
-    resStatus->rec_len = 0;
-    resStatus->curStatus = HEADER;
-    resStatus->content = NULL;
-    resStatus->hdsize = 0;
-
-    memset(resStatus->buf, 0, MAXLINE);
 }
 
 
@@ -181,7 +178,9 @@ void closeConnection(conn_node* node, pool *p){
 }
 
 int processReq(conn_node *cur_node, pool *p) {
-    char buf[MAXLINE];
+
+    char* buf = cur_node->request_status.buf;
+    char linebuf[MAXLINE];
     int n;
     req_status reqStatus;
 
@@ -189,11 +188,28 @@ int processReq(conn_node *cur_node, pool *p) {
 
     initReqStatus(&reqStatus);
 
-    memset(buf, 0, MAXLINE);
+    memset(linebuf, 0, MAXLINE);
 
     /* Read request line and headers */
-    if ((n = httpreadline(cur_node->clientfd, buf, MAXLINE)) < 0) {
-        printf("Cannot read content from ");
+    while ((n = httpreadline(cur_node->clientfd, linebuf, MAXLINE)) > 0) {
+        cur_node->request_status.reqlen += n;
+
+        if (cur_node->request_status.reqlen > MAXLINE) {
+            printf("Request Header is too large to fit in buffer\n");
+            return -1;
+        }
+
+        strcat(buf, linebuf);
+        memset(linebuf, 0, MAXLINE);
+
+        if (strstr(buf, "\r\n\r\n") != NULL) {
+            break;
+        }
+    }
+
+    if (n == -1) {
+        return 0;
+    }else if (n == 0) {
         return -1;
     }
 

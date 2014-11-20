@@ -41,12 +41,29 @@ typedef struct{
     char* content;
 } res_status;
 
+typedef struct {
+    method_t method;
+    reqtype_t reqtype;
+    int bitrate;
+    int seg;
+    int frag;
+    int reqlen;
+    int firstlen;
+    char* resloc;
+    char uri[MAXLINE];
+    char version[MAXLINE];
+    char buf[MAXLINE];
+//    char response[MAXLINE];
+    bool connclose;
+} req_status;
+
 typedef struct _conn_node{
     int clientfd;
     int serverfd;
     char* clientaddr;
     char serveraddr[MINLINE];
     res_status response_status;
+    req_status request_status;
     queue_t* reqq;
     struct _conn_node* prev;
     struct _conn_node* next;
@@ -62,19 +79,6 @@ typedef struct {
     conn_node*list_tail;
 } pool;
 
-
-typedef struct {
-    method_t method;
-    reqtype_t reqtype;
-    int bitrate;
-    int seg;
-    int frag;
-    char* resloc;
-    char uri[MAXLINE];
-    char version[MAXLINE];
-    char response[MAXLINE];
-    bool connclose;
-} req_status;
 
 void init_pool(int http_fd, pool *p);
 

@@ -5,11 +5,17 @@ int parse_uri(char* buf, req_status* req) {
 
     int temport = 0;
     int status = 0;
+    char linebuf[MAXLINE];
     char host[MAXLINE], method[MAXLINE], uri[MAXLINE];
 
     memset(req->uri, 0, MAXLINE);
+    memset(linebuf, 0, MAXLINE);
 
-    if (sscanf(buf, "%s %s %s", method, uri, req->version) != 3) {
+    bufreadline(buf, req->reqlen, linebuf, MAXLINE);
+
+    req->firstlen = strlen(linebuf);
+
+    if (sscanf(linebuf, "%s %s %s", method, uri, req->version) != 3) {
         return -1;
     }
 
@@ -72,7 +78,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
         }
 
         strcat(resStatus->buf, linebuf);
-        if (strcmp(linebuf, "\r\n") == 0) {
+        if (strstr(linebuf, "\r\n\r\n") != NULL) {
             break;
         }
 
