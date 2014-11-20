@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     init_pool(http_listen_socket, &conn_pool);
 
     do {
-        printf("Pool start\n");
+//        printf("Pool start\n");
         conn_pool.ready_set = conn_pool.read_set;
         conn_pool.nconn = select(conn_pool.maxfd + 1, &conn_pool.ready_set, NULL, NULL, NULL);
         conn_size = sizeof(cli_addr);

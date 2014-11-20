@@ -20,7 +20,7 @@ all: ${BINS}  clean_obj
 
 
 run:
-	./proxy log.txt 0.8 15641 127.0.0.1 127.0.0.1 15441 127.0.0.1
+	./proxy log.txt 0.8 15641 1.0.0.1 127.0.0.1 15441 3.0.0.1
 
 
 spiffy:

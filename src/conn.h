@@ -2,8 +2,6 @@
 #define CONN_H
 
 #include <stdio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 #include <arpa/inet.h>
 #include "queue.h"
 

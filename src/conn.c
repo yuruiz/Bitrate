@@ -1,5 +1,5 @@
 #include <netdb.h>
-#include <sndfile.h>
+#include <sys/time.h>
 #include "conn.h"
 #include "mydns.h"
 #include "proxy.h"
@@ -161,20 +161,33 @@ int openserverfd(conn_node* node) {
     return server_fd;
 }
 
+void closeConnection(conn_node* node, pool *p){
+    close(node->clientfd);
+    FD_CLR(node->clientfd, &p->read_set);
+    if (node->serverfd > 0) {
+        close(node->serverfd);
+        FD_CLR(node->serverfd, &p->read_set);
+    }
+}
 
 int sendtoServer(conn_node *cur_node, pool *p) {
     char buf[MAXLINE];
+    int n;
     req_status reqStatus;
 
     printf("Start sending request to server\n");
 
     initReqStatus(&reqStatus);
 
+    memset(buf, 0, MAXLINE);
+
     /* Read request line and headers */
-    if (httpreadline(cur_node->clientfd, buf, MAXLINE) < 0) {
+    if ((n = httpreadline(cur_node->clientfd, buf, MAXLINE)) < 0) {
         printf("Cannot read content from ");
         return -1;
     }
+
+    printf("%s", buf);
 
     /*parse the request line*/
     if (parse_uri(buf, &reqStatus) < 0) {
@@ -199,13 +212,6 @@ int sendtoServer(conn_node *cur_node, pool *p) {
 
     /*send the request to server*/
     if (sendRequset(cur_node, &reqStatus) < 0) {
-        close(cur_node->clientfd);
-        FD_CLR(cur_node->clientfd, &p->read_set);
-        if (cur_node->serverfd > 0) {
-            close(cur_node->serverfd);
-            FD_CLR(cur_node->serverfd, &p->read_set);
-        }
-
         return -1;
     }
 
@@ -229,24 +235,16 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
     if((hdsize = parseServerHd(cur_node, &resStatus)) < 0) {
         if (resStatus.content != NULL) {
             free(resStatus.content);
-            close(cur_node->clientfd);
-            FD_CLR(cur_node->clientfd, &p->read_set);
-            close(cur_node->serverfd);
-            FD_CLR(cur_node->serverfd, &p->read_set);
-            return -1;
         }
+        return -1;
     }
 
     /*send the response header to client*/
     write(cur_node->clientfd, resStatus.buf, hdsize);
 
     /*read the response content*/
-    if(write(cur_node->serverfd, resStatus.content, resStatus.contentlen) != resStatus.contentlen){
+    if(read(cur_node->serverfd, resStatus.content, resStatus.contentlen) != resStatus.contentlen){
         free(resStatus.content);
-        close(cur_node->clientfd);
-        FD_CLR(cur_node->clientfd, &p->read_set);
-        close(cur_node->serverfd);
-        FD_CLR(cur_node->serverfd, &p->read_set);
         return -1;
     }
 
@@ -255,10 +253,6 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
     if (req == NULL) {
         printf("ERROR! reqest records empty!\n ");
         free(resStatus.content);
-        close(cur_node->clientfd);
-        FD_CLR(cur_node->clientfd, &p->read_set);
-        close(cur_node->serverfd);
-        FD_CLR(cur_node->serverfd, &p->read_set);
         return -1;
     }
 
@@ -283,15 +277,13 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
     if (req->reqtype != MANIFEST && writelen != resStatus.contentlen) {
         free(req);
         free(resStatus.content);
-        close(cur_node->clientfd);
-        FD_CLR(cur_node->clientfd, &p->read_set);
-        close(cur_node->serverfd);
-        FD_CLR(cur_node->serverfd, &p->read_set);
         return -1;
     }
 
     free(req);
     free(resStatus.content);
+
+    printf("Sending response to client finished\n");
 
     return 0;
 
@@ -310,6 +302,7 @@ void conn_handle(pool *p) {
             p->nconn--;
 
             if (sendtoClient(cur_node, p) < 0) {
+                closeConnection(cur_node, p);
                 conn_node *temp = cur_node;
                 cur_node = cur_node->next;
                 remove_node(temp, p);
@@ -320,6 +313,7 @@ void conn_handle(pool *p) {
         if (FD_ISSET(cur_node->clientfd, &p->ready_set)) {
             p->nconn--;
             if (sendtoServer(cur_node, p) < 0) {
+                closeConnection(cur_node, p);
                 conn_node *temp = cur_node;
                 cur_node = cur_node->next;
                 remove_node(temp, p);

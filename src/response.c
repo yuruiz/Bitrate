@@ -1,3 +1,4 @@
+#include <sys/time.h>
 #include "parse.h"
 #include "conn.h"
 #include "bitrate.h"
@@ -10,8 +11,6 @@ int sendRequset(conn_node *node, req_status *reqStatus){
     req_t *reqRecord;
     int n;
 
-
-
     memset(header, 0, MAXLINE);
     memset(req, 0, MAXLINE);
     memset(reqOrigin, 0, MAXLINE);
@@ -19,6 +18,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
 
     while ((n = httpreadline(node->clientfd, buf, MAXLINE)) > 0) {
         strcat(header, buf);
+        printf("%s", buf);
 
         if(!strcmp(buf,"\r\n")){
             break;
