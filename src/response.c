@@ -18,7 +18,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
 
     while ((n = httpreadline(node->clientfd, buf, MAXLINE)) > 0) {
         strcat(header, buf);
-        printf("%s", buf);
+//        printf("%s", buf);
 
         if(!strcmp(buf,"\r\n")){
             break;
@@ -50,7 +50,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
             reqRecord->bitrate = getBitrate();
             struct timeval curT;
             gettimeofday(&curT, NULL);
-            reqRecord->bitrate = curT.tv_sec * 1000 + curT.tv_usec / 1000;
+            reqRecord->timeStamp = curT.tv_sec * 1000 + curT.tv_usec / 1000;
             memset(reqRecord->chunkname, 0, MINLINE);
             sprintf(reqRecord->chunkname, "Seg%d-Frag%d", reqStatus->seg, reqStatus->frag);
             break;
@@ -65,7 +65,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
 
     if (reqStatus->reqtype == MANIFEST) {
         if(strstr(reqOrigin,"\r\n")==NULL){
-            strcat(req,"\r\n");
+            strcat(reqOrigin,"\r\n");
         }
         strcat(reqOrigin, header);
         size_t reqlen = strlen(reqOrigin);
@@ -76,7 +76,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
 
         req_t *reqR = malloc(sizeof(req_t));
         reqR->reqtype = MANIFEST;
-        enqueue(node->reqq, (void *) reqRecord);
+        enqueue(node->reqq, (void *) reqR);
     }
 
 

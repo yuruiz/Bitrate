@@ -35,6 +35,7 @@ typedef struct {
 typedef struct{
     conn_status_t curStatus;
     size_t contentlen;
+    ssize_t hdsize;
     size_t rec_len;
     char buf[MAXLINE];
     char* content;

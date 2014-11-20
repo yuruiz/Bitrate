@@ -66,6 +66,7 @@ int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     new_node->response_status.curStatus = HEADER;
     new_node->response_status.content = NULL;
     new_node->response_status.rec_len = 0;
+    new_node->response_status.hdsize = 0;
 
     memset(new_node->response_status.buf, 0, MAXLINE);
 
@@ -103,6 +104,7 @@ void initResStatus(res_status *resStatus){
     resStatus->rec_len = 0;
     resStatus->curStatus = HEADER;
     resStatus->content = NULL;
+    resStatus->hdsize = 0;
 
     memset(resStatus->buf, 0, MAXLINE);
 }
@@ -178,7 +180,7 @@ void closeConnection(conn_node* node, pool *p){
     }
 }
 
-int sendtoServer(conn_node *cur_node, pool *p) {
+int processReq(conn_node *cur_node, pool *p) {
     char buf[MAXLINE];
     int n;
     req_status reqStatus;
@@ -230,23 +232,43 @@ int sendtoServer(conn_node *cur_node, pool *p) {
 
 }
 
-int sendtoClient(conn_node *cur_node,  pool *p) {
+int processResp(conn_node *cur_node, pool *p) {
 
     res_status *resStatus = &cur_node->response_status;
-    int hdsize = 0;
     ssize_t n;
-
 
     if (resStatus->curStatus == HEADER) {
         printf("Start processing response header\n");
         /*Parse the response header*/
-        if((hdsize = parseServerHd(cur_node, &resStatus)) < 0) {
-            if (resStatus->content != NULL) {
-                free(resStatus->content);
+        if((resStatus->hdsize = parseServerHd(cur_node, resStatus)) <= 0) {
+
+            if(resStatus->hdsize == 0){
+                if (resStatus->content != NULL) {
+                    free(resStatus->content);
+                }
+                printf("Connection Closed\n");
+                return -1;
+            }else {
+                printf("unable to read\n");
+                return 0;
             }
-            printf("Parse Response Header Error\n");
-            return -1;
         }
+
+
+        if (resStatus->contentlen > 0) {
+            resStatus->curStatus = PAYLOAD;
+        }else{
+            write(cur_node->clientfd, resStatus->buf, resStatus->hdsize);
+            initResStatus(resStatus);
+
+            req_t *req = (req_t *) dequeue(cur_node->reqq);
+
+            if(req!= NULL){
+                free(req);
+            }
+        }
+
+        printf("Processing response header finished\n");
     }else {
 
 
@@ -261,6 +283,8 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
             return -1;
         }
 
+//        printf("Read Payload finished\n");
+
         resStatus->rec_len += n;
 
         if (resStatus->rec_len < resStatus->contentlen) {
@@ -268,52 +292,61 @@ int sendtoClient(conn_node *cur_node,  pool *p) {
         }
 
 
-        /*send the response header to client*/
-        write(cur_node->clientfd, resStatus->buf, hdsize);
-
         /*parse the response content*/
         req_t *req = (req_t *) dequeue(cur_node->reqq);
+
         if (req == NULL) {
             printf("ERROR! reqest records empty!\n ");
             free(resStatus->content);
             return -1;
         }
 
-        ssize_t writelen;
+
+//        printf("Arbituating Response type\n");
+
+        ssize_t writelen = 0;
         struct timeval curT;
         switch (req->reqtype) {
             case MANIFEST:
-                //todo update manifest
+                printf("Manifest response received\n");
                 break;
             case VIDEO:
+                printf("Video response received\n");
+                printf("The content length is %d\n", resStatus->contentlen);
                 gettimeofday(&curT, NULL);
                 updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000,
                         (int) resStatus->contentlen, req->bitrate, req->chunkname, cur_node->serveraddr);
             case OTHER:
-                writelen = write(cur_node->clientfd, resStatus->content, resStatus->contentlen);
+                /*send the response header to client*/
+                send(cur_node->clientfd, resStatus->buf, resStatus->hdsize, 0);
+                /*Send the payload*/
+                writelen = send(cur_node->clientfd, resStatus->content, resStatus->contentlen, 0);
                 break;
             default:
                 printf("Error! unknow request record\n");
                 return -1;
         }
 
+//        printf("Sending Response finished\n");
+
+
         if (req->reqtype != MANIFEST && writelen != resStatus->contentlen) {
+            printf("Sending response to client error\n");
             free(req);
             free(resStatus->content);
             return -1;
         }
 
+//        printf("Start cleaning\n");
         free(req);
         free(resStatus->content);
 
         initResStatus(resStatus);
 
-        printf("Sending response to client finished\n");
+        printf("Processing response payload finished\n");
     }
 
-
     return 0;
-
 }
 
 void conn_handle(pool *p) {
@@ -325,10 +358,11 @@ void conn_handle(pool *p) {
     /*Handle the http connections*/
     while (cur_node != NULL && p->nconn > 0) {
 
+        printf("***********************************************************\n");
+
         if (cur_node->serverfd > 0 && FD_ISSET(cur_node->serverfd, &p->ready_set)) {
             p->nconn--;
-
-            if (sendtoClient(cur_node, p) < 0) {
+            if (processResp(cur_node, p) < 0) {
                 closeConnection(cur_node, p);
                 conn_node *temp = cur_node;
                 cur_node = cur_node->next;
@@ -339,7 +373,7 @@ void conn_handle(pool *p) {
 
         if (FD_ISSET(cur_node->clientfd, &p->ready_set)) {
             p->nconn--;
-            if (sendtoServer(cur_node, p) < 0) {
+            if (processReq(cur_node, p) < 0) {
                 closeConnection(cur_node, p);
                 conn_node *temp = cur_node;
                 cur_node = cur_node->next;
@@ -347,6 +381,7 @@ void conn_handle(pool *p) {
                 continue;
             }
         }
+
         cur_node = cur_node->next;
     }
 }
