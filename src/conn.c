@@ -62,6 +62,12 @@ int add_conn(int connfd, pool *p, struct sockaddr_in *cli_addr) {
     new_node->prev = NULL;
     new_node->next = NULL;
     new_node->reqq = newqueue();
+    new_node->response_status.contentlen = 0;
+    new_node->response_status.curStatus = HEADER;
+    new_node->response_status.content = NULL;
+    new_node->response_status.rec_len = 0;
+
+    memset(new_node->response_status.buf, 0, MAXLINE);
 
     if (p->list_head == NULL) {
         p->list_head = new_node;
@@ -94,6 +100,8 @@ void initReqStatus(req_status *reqStatus){
 
 void initResStatus(res_status *resStatus){
     resStatus->contentlen = 0;
+    resStatus->rec_len = 0;
+    resStatus->curStatus = HEADER;
     resStatus->content = NULL;
 
     memset(resStatus->buf, 0, MAXLINE);
@@ -224,69 +232,85 @@ int sendtoServer(conn_node *cur_node, pool *p) {
 
 int sendtoClient(conn_node *cur_node,  pool *p) {
 
-    res_status resStatus;
+    res_status *resStatus = &cur_node->response_status;
     int hdsize = 0;
-    int n;
+    ssize_t n;
 
-    printf("Start sending response to client\n");
 
-    initResStatus(&resStatus);
-
-    /*Parse the response header*/
-    if((hdsize = parseServerHd(cur_node, &resStatus)) < 0) {
-        if (resStatus.content != NULL) {
-            free(resStatus.content);
-        }
-        printf("Parse Response Header Error\n");
-        return -1;
-    }
-
-    /*send the response header to client*/
-    write(cur_node->clientfd, resStatus.buf, hdsize);
-
-    /*read the response content*/
-    if((n = read(cur_node->serverfd, resStatus.content, resStatus.contentlen)) != resStatus.contentlen){
-        free(resStatus.content);
-        printf("Read Response payload error %d\n", n);
-        return -1;
-    }
-
-    /*parse the response content*/
-    req_t* req = (req_t*)dequeue(cur_node->reqq);
-    if (req == NULL) {
-        printf("ERROR! reqest records empty!\n ");
-        free(resStatus.content);
-        return -1;
-    }
-
-    ssize_t writelen;
-    struct timeval curT;
-    switch (req->reqtype) {
-        case MANIFEST:
-            //todo update manifest
-            break;
-        case VIDEO:
-            gettimeofday(&curT, NULL);
-            updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000,
-                    (int)resStatus.contentlen, req->bitrate,req->chunkname, cur_node->serveraddr);
-        case OTHER:
-            writelen = write(cur_node->clientfd, resStatus.content, resStatus.contentlen);
-            break;
-        default:
-            printf("Error! unknow request record\n");
+    if (resStatus->curStatus == HEADER) {
+        printf("Start processing response header\n");
+        /*Parse the response header*/
+        if((hdsize = parseServerHd(cur_node, &resStatus)) < 0) {
+            if (resStatus->content != NULL) {
+                free(resStatus->content);
+            }
+            printf("Parse Response Header Error\n");
             return -1;
-    }
+        }
+    }else {
 
-    if (req->reqtype != MANIFEST && writelen != resStatus.contentlen) {
+
+        printf("Start processing response payload\n");
+
+        size_t left = resStatus->contentlen - resStatus->rec_len;
+
+        /*read the response content*/
+        if ((n = read(cur_node->serverfd, resStatus->content + resStatus->rec_len, left)) <= 0) {
+            free(resStatus->content);
+            printf("Read Response payload error %d\n", n);
+            return -1;
+        }
+
+        resStatus->rec_len += n;
+
+        if (resStatus->rec_len < resStatus->contentlen) {
+            return 0;
+        }
+
+
+        /*send the response header to client*/
+        write(cur_node->clientfd, resStatus->buf, hdsize);
+
+        /*parse the response content*/
+        req_t *req = (req_t *) dequeue(cur_node->reqq);
+        if (req == NULL) {
+            printf("ERROR! reqest records empty!\n ");
+            free(resStatus->content);
+            return -1;
+        }
+
+        ssize_t writelen;
+        struct timeval curT;
+        switch (req->reqtype) {
+            case MANIFEST:
+                //todo update manifest
+                break;
+            case VIDEO:
+                gettimeofday(&curT, NULL);
+                updateBitrate(req->timeStamp, curT.tv_sec * 1000 + curT.tv_usec / 1000,
+                        (int) resStatus->contentlen, req->bitrate, req->chunkname, cur_node->serveraddr);
+            case OTHER:
+                writelen = write(cur_node->clientfd, resStatus->content, resStatus->contentlen);
+                break;
+            default:
+                printf("Error! unknow request record\n");
+                return -1;
+        }
+
+        if (req->reqtype != MANIFEST && writelen != resStatus->contentlen) {
+            free(req);
+            free(resStatus->content);
+            return -1;
+        }
+
         free(req);
-        free(resStatus.content);
-        return -1;
+        free(resStatus->content);
+
+        initResStatus(resStatus);
+
+        printf("Sending response to client finished\n");
     }
 
-    free(req);
-    free(resStatus.content);
-
-    printf("Sending response to client finished\n");
 
     return 0;
 
