@@ -183,7 +183,7 @@ int processReq(conn_node *cur_node, pool *p) {
     char linebuf[MAXLINE];
     int n;
 
-    printf("Start request processing\n");
+//    printf("Start request processing\n");
 
     memset(linebuf, 0, MAXLINE);
 
@@ -240,7 +240,7 @@ int processReq(conn_node *cur_node, pool *p) {
 
     initReqStatus(&cur_node->request_status);
 
-    printf("Sending request to server finished\n");
+//    printf("Sending request to server finished\n");
 
     return 0;
 
@@ -253,7 +253,7 @@ int processResp(conn_node *cur_node, pool *p) {
     ssize_t n;
 
     if (resStatus->curStatus == HEADER) {
-        printf("Start processing response header\n");
+//        printf("Start processing response header\n");
         /*Parse the response header*/
         if((resStatus->hdsize = parseServerHd(cur_node, resStatus)) <= 0) {
 
@@ -283,11 +283,11 @@ int processResp(conn_node *cur_node, pool *p) {
             }
         }
 
-        printf("Processing response header finished\n");
+//        printf("Processing response header finished\n");
     }else {
 
 
-        printf("Start processing response payload\n");
+//        printf("Start processing response payload\n");
 
         size_t left = resStatus->contentlen - resStatus->rec_len;
 
@@ -318,7 +318,7 @@ int processResp(conn_node *cur_node, pool *p) {
         struct timeval curT;
         switch (req->reqtype) {
             case MANIFEST:
-//                printf("Manifest response received\n");
+                printf("Manifest response received\n");
                 break;
             case VIDEO:
 //                printf("Video response received\n");
@@ -353,7 +353,7 @@ int processResp(conn_node *cur_node, pool *p) {
 
         initResStatus(resStatus);
 
-        printf("Processing response payload finished\n");
+//        printf("Processing response payload finished\n");
     }
 
     return 0;
