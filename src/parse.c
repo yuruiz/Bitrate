@@ -80,7 +80,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
         strcat(resStatus->buf, linebuf);
         if (strstr(resStatus->buf, "\r\n\r\n") != NULL) {
-            printf("Finishe reading response header\n");
+//            printf("Finishe reading response header\n");
             break;
         }
 

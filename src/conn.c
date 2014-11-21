@@ -170,6 +170,7 @@ int openserverfd(conn_node* node) {
 
 void closeConnection(conn_node* node, pool *p){
     close(node->clientfd);
+
     FD_CLR(node->clientfd, &p->read_set);
     if (node->serverfd > 0) {
         close(node->serverfd);
