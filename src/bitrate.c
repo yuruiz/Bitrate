@@ -26,7 +26,7 @@ void updateBitrate(long long t1, long long t2, int len, int req_bitrate, char* c
         diff = 1;
     }
 
-    double t = (double) (((double) len) / ((double) diff)) * 8000;
+    double t = (((double) len) / ((double) diff)) * 8000;
 
     throughput = alpha * t + (1 - alpha) * throughput;
 

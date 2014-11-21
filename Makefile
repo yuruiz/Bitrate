@@ -19,8 +19,11 @@ BINS            = proxy
 all: ${BINS}  clean_obj
 
 
-run:
-	./proxy log.txt 0.8 15641 1.0.0.1 127.0.0.1 15441 3.0.0.1
+run_1:
+	./proxy log_101.txt 0.1 15641 1.0.0.1 127.0.0.1 15441 3.0.0.1
+
+run_2:
+	./proxy log_201.txt 0.1 15741 2.0.0.1 127.0.0.1 15441 4.0.0.1
 
 
 spiffy:
