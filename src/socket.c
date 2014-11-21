@@ -1,4 +1,6 @@
+#include <arpa/inet.h>
 #include "socket.h"
+#include "proxy.h"
 
 
 int close_socket(int socket) {
@@ -15,7 +17,7 @@ int open_port(int port, struct sockaddr_in * addr){
 
     addr->sin_family = AF_INET;
     addr->sin_port = htons(port);
-    addr->sin_addr.s_addr = INADDR_ANY;
+    addr->sin_addr.s_addr = inet_addr(getfakeip());
 
     if ((ret_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
         printf("Failed creating socket.\n");
