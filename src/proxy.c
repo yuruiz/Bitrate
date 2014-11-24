@@ -1,16 +1,14 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include "log.h"
 #include "conn.h"
 #include "socket.h"
-#include "parse.h"
 
 
 static char* fake_ip = NULL;
 static char* www_ip = NULL;
-static double alpha;
+static double alpha = 1.0;
 
 #define USAGE "Usage: %s <log> <alpha> <listen-port> <fake-ip> <dns-ip> <dns-port> [<www-ip>]\n"
 

@@ -3,6 +3,6 @@
 
 char* getfakeip();
 char* getwwwip();
-float getAlpha();
+double getAlpha();
 
 #endif

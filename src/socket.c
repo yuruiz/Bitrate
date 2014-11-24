@@ -1,4 +1,5 @@
 #include "socket.h"
+#include "proxy.h"
 
 
 int close_socket(int socket) {

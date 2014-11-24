@@ -5,11 +5,18 @@ int parse_uri(char* buf, req_status* req) {
 
     int temport = 0;
     int status = 0;
+    char linebuf[MAXLINE];
     char host[MAXLINE], method[MAXLINE], uri[MAXLINE];
 
     memset(req->uri, 0, MAXLINE);
+    memset(linebuf, 0, MAXLINE);
 
-    if (sscanf(buf, "%s %s %s", method, uri, req->version) != 3) {
+    req->firstlen = bufreadline(buf, req->reqlen, linebuf, MAXLINE);
+
+    if (sscanf(linebuf, "%s %s %s", method, uri, req->version) != 3) {
+        printf("Parse request first line error\n");
+        printf("The line length is %d\n", req->firstlen);
+        printf("%s", linebuf);
         return -1;
     }
 
@@ -64,7 +71,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     while((linesize = httpreadline(node->serverfd, linebuf, MAXLINE)) > 0) {
         hdsize += linesize;
-        printf("%s", linebuf);
+//        printf("%s", linebuf);
 
         if (hdsize > MAXLINE) {
             printf("Header too long to fit in buffer\n");
@@ -72,7 +79,8 @@ int parseServerHd(conn_node* node, res_status *resStatus){
         }
 
         strcat(resStatus->buf, linebuf);
-        if (strcmp(linebuf, "\r\n") == 0) {
+        if (strstr(resStatus->buf, "\r\n\r\n") != NULL) {
+//            printf("Finishe reading response header\n");
             break;
         }
 
@@ -91,7 +99,8 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     if (linesize <= 0) {
         printf("Reading response error\n");
-        return -1;
+        printf("%s", resStatus->buf);
+        return linesize;
     }
 
     return hdsize;

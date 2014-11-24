@@ -12,7 +12,7 @@ int getBitrate(){
     return bitrate;
 }
 
-void updateBitrate(long long t1, long long t2, int len, int req_bitrate,char* chunkname, char* server_ip){
+void updateBitrate(long long t1, long long t2, int len, int req_bitrate, char* chunkname, char* server_ip) {
 
     double alpha = getAlpha();
 
@@ -20,13 +20,20 @@ void updateBitrate(long long t1, long long t2, int len, int req_bitrate,char* ch
         return;
     }
 
-    double t = (double)(((double)len) / ((double)(t2 - t1))) * 8000;
+    long long diff = t2 - t1;
+
+    if (diff == 0) {
+        diff = 1;
+    }
+
+    double t = (((double) len) / ((double) diff)) * 8000;
 
     throughput = alpha * t + (1 - alpha) * throughput;
 
+
     int i;
     for (i = 0; i < 4; ++i) {
-        if (throughput < bitrates[i] * 1.5) {
+        if (throughput < bitrates[i] * 1.5 * 1000) {
             if (i > 0) {
                 i--;
             }
@@ -34,9 +41,18 @@ void updateBitrate(long long t1, long long t2, int len, int req_bitrate,char* ch
         }
     }
 
-    bitrate = bitrates[i];
+    if (i == 4) {
+        bitrate = bitrates[3];
+    }else{
+        bitrate = bitrates[i];
+    }
 
-    logging((float) (t2 - t1) / 1000, (float) t / 1000, (float) throughput / 1000, req_bitrate, server_ip, chunkname);
+//    printf("Bit rate now %d\n", bitrate);
+//    printf("The alpha is %f\n", alpha);
+//    printf("The average throughput is %f\n", throughput);
+//    printf("The current throughput is %f\n", t);
+
+    logging((float) diff / 1000, (float) t / 1000, (float) throughput / 1000, req_bitrate, server_ip, chunkname);
 
     return;
 
