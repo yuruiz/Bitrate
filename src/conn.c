@@ -397,4 +397,138 @@ void conn_handle(pool *p) {
     }
 }
 
+int initDNSRequest(dns_message_t *m, const char *name, void *encodedBuf) {
+    char *tok, *str;
+    char *saveptr = NULL;
+    char len, buf[255];
+    dns_req_t *qptr;
 
+    // header
+    memset(&m->header, 0, sizeof(dns_header_t));
+    m->header.id = random() % (1 << 16); // choose id randomly
+    m->header.qdcount = 1;
+
+    // dns request
+    qptr = &m->req;
+    memset(qptr, 0, sizeof(dns_req_t));
+    qptr->qtype = 1;
+    qptr->qclass = 1;
+    if (strlen(name) > 255) {
+        fprintf(stderr, "error name length\n");
+        return -1;
+    }
+    strncpy(buf, name, strlen(name));
+    str = buf;
+
+    // parse name, replace '.' with length
+    while ((tok = strtok_r(str, ".", &saveptr)) != NULL) {
+        len = (char)strlen(tok);
+        qptr->qname[qptr->qname_len] = len;
+        strncpy(qptr->qname + qptr->qname_len+1, tok, len);
+        qptr->qname_len += (len+1);
+        str = NULL;
+    }
+    qptr->qname_len++;
+    m->length = sizeof(dns_header_t) + qptr->qname_len + sizeof(qptr->qtype) + sizeof(qptr->qclass);
+    encode(m, encodedBuf);
+    return m->length;
+}
+
+/**
+* encode from host machine order to network order
+*/
+int encode(dns_message_t *m, void *encodedBuf) {
+    void *offset;
+    m->header.id = htons(m->header.id);
+    m->header.flag = htons(m->header.flag);
+    m->header.qdcount = htons(m->header.qdcount);
+    m->header.ancount = htons(m->header.ancount);
+    offset = memcpy(encodedBuf, &m->header, sizeof(m->header)) + sizeof(m->header);
+    if (m->header.qdcount > 0) {
+        m->req.qtype = htons(m->req.qtype);
+        m->req.qclass = htons(m->req.qclass);
+        offset = memcpy(offset, m->req.qname, m->req.qname_len)
+                + m->req.qname_len;
+        offset = memcpy(offset, &m->req.qtype, sizeof(m->req.qtype))
+                + sizeof(m->req.qtype);
+        offset = memcpy(offset, &m->req.qclass, sizeof(m->req.qclass))
+                + sizeof(m->req.qclass);
+    }
+    if (m->header.ancount > 0) {
+        m->res.type = htons(m->res.type);
+        m->res.class = htons(m->res.class);
+        m->res.ttl = htonl(m->res.ttl);
+        m->res.rdlength = ntohs(m->res.rdlength);
+        offset = memcpy(offset, m->res.name, m->res.name_len)
+                + m->res.name_len;
+        offset = memcpy(offset, &m->res.type, sizeof(m->res.type))
+                + sizeof(m->res.type);
+        offset = memcpy(offset, &m->res.class, sizeof(m->res.class))
+                + sizeof(m->res.class);
+        offset = memcpy(offset, &m->res.ttl, sizeof(m->res.ttl))
+                + sizeof(m->res.ttl);
+        offset = memcpy(offset, &m->res.rdlength, sizeof(m->res.rdlength))
+                + sizeof(m->res.rdlength);
+        offset = memcpy(offset, &m->res.rdata, sizeof(m->res.rdata))
+                + sizeof(m->res.rdata);
+    }
+    return 0;
+}
+
+/**
+* decode from network byte order to host machine byte order
+*/
+int decode(dns_message_t *m, void *buf, ssize_t len) {
+    void *offset;
+    char *i;
+    char *j;
+    memset(m, 0, sizeof(*m));
+    m->length = len;
+    memcpy(&m->header, buf, sizeof(m->header));
+    m->header.id = ntohs(m->header.id);
+    m->header.flag = ntohs(m->header.flag);
+    m->header.qdcount = ntohs(m->header.qdcount);
+    m->header.ancount = ntohs(m->header.ancount);
+    if (m->header.qdcount > 1 || m->header.ancount > 1) {
+        fprintf(stderr, "query number error\n");
+        return -1;
+    }
+    offset = buf + sizeof(m->header);
+    if (m->header.qdcount > 0) {
+        m->req.qname_len = 1;
+        for (i = offset; (*i) != 0; i++) {
+            m->req.qname_len++;
+        }
+        memcpy(&m->req.qname, offset, m->req.qname_len);
+        offset += m->req.qname_len;
+        memcpy(&m->req.qtype, offset, sizeof(m->req.qtype));
+        m->req.qtype = ntohs(m->req.qtype);
+        offset += sizeof(m->req.qtype);
+        memcpy(&m->req.qclass, offset, sizeof(m->req.qclass));
+        m->req.qclass = ntohs(m->req.qclass);
+        offset += sizeof(m->req.qclass);
+    }
+    if (m->header.ancount > 0) {
+        m->res.name_len = 1;
+        for (j = offset; (*j) != 0; j++) {
+            m->res.name_len++;
+        }
+        memcpy(&m->res.name, offset, m->res.name_len);
+        offset += m->res.name_len;
+        memcpy(&m->res.type, offset, sizeof(m->res.type));
+        m->res.type = ntohs(m->res.type);
+        offset += sizeof(m->res.type);
+        memcpy(&m->res.class, offset, sizeof(m->res.class));
+        m->res.class = ntohs(m->res.class);
+        offset += sizeof(m->res.class);
+        memcpy(&m->res.ttl, offset, sizeof(m->res.ttl));
+        m->res.ttl = ntohs(m->res.ttl);
+        offset += sizeof(m->res.ttl);
+        memcpy(&m->res.rdlength, offset, sizeof(m->res.rdlength));
+        m->res.rdlength = ntohl(m->res.rdlength);
+        offset += sizeof(m->res.rdlength);
+        memcpy(&m->res.rdata, offset, sizeof(m->res.rdata));
+        offset += sizeof(m->res.rdata);
+    }
+    return 0;
+}

@@ -1,14 +1,17 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include "log.h"
 #include "conn.h"
 #include "socket.h"
+#include "proxy.h"
 
 
 static char* fake_ip = NULL;
 static char* www_ip = NULL;
 static double alpha = 1.0;
+proxy_t proxy;
 
 #define USAGE "Usage: %s <log> <alpha> <listen-port> <fake-ip> <dns-ip> <dns-port> [<www-ip>]\n"
 
@@ -57,6 +60,12 @@ int main(int argc, char *argv[]) {
         printf("Open port failed\n");
         return EXIT_FAILURE;
     }
+
+    // parse fake-ip
+    bzero(&proxy.myaddr, sizeof(struct sockaddr_in));
+    proxy.myaddr.sin_family = AF_INET;
+    inet_aton(fake_ip, &proxy.myaddr.sin_addr);
+    proxy.myaddr.sin_port = htons(0);
 
     init_pool(http_listen_socket, &conn_pool);
 
