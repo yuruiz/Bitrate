@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "nameserver.h"
-#include "conn.h"
+#include "mydns.h"
 #include "log.h"
 
 dns_server_t ns;

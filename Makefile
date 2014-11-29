@@ -3,12 +3,13 @@ CC 		= gcc
 CFLAGS		= -g -Wall -DDEBUG
 LDFLAGS		= -lm
 TESTDEFS	= -DTESTING			# comment this out to disable debugging code
-OBJS		= proxy.o conn.o io.o log.o parse.o socket.o bitrate.o queue.o response.o mydns.o nameserver.o
+OBJS		= proxy.o conn.o io.o log.o parse.o socket.o bitrate.o queue.o response.o mydns.o
 MK_CHUNK_OBJS   = make_chunks.o chunk.o sha.o
+NS_OBJS     = nameserver.o log.o mydns.o
 SOURCE=src
 VPATH=$(SOURCE)
 
-BINS            = proxy
+BINS            = proxy nameserver
 
 # Implicit .o target
 .c.o:
@@ -34,6 +35,9 @@ test: peer_test
 
 proxy: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)
+
+nameserver: $(NS_OBJS)
+	$(CC) $(CFLAGS) $(NS_OBJS) -o $@ $(LDFLAGS)
 
 make-chunks: $(MK_CHUNK_OBJS)
 	$(CC) $(CFLAGS) $(MK_CHUNK_OBJS) -o $@ $(LDFLAGS)

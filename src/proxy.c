@@ -6,12 +6,13 @@
 #include "conn.h"
 #include "socket.h"
 #include "proxy.h"
+#include "mydns.h"
 
 
 static char* fake_ip = NULL;
 static char* www_ip = NULL;
 static double alpha = 1.0;
-proxy_t proxy;
+extern proxy_t proxy;
 
 #define USAGE "Usage: %s <log> <alpha> <listen-port> <fake-ip> <dns-ip> <dns-port> [<www-ip>]\n"
 
