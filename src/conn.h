@@ -13,8 +13,8 @@
 
 typedef struct dns {
     int sock;
-    unsigned int dns_port;
     char dns_ip[64];
+    unsigned int dns_port;
     struct sockaddr_in addr;
 } dns_t;
 
