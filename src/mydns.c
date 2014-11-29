@@ -72,10 +72,10 @@ int resolve(const char *node, const char *service,
             fprintf(stderr, "decode failed\n");
             return -1;
         }
-        if (req_message.header.id != res_message.header.id) {
-            fprintf(stderr, "response id not match\n");
-            return -1;
-        }
+//        if (req_message.header.id != res_message.header.id) {
+//            fprintf(stderr, "response id not match\n");
+//            return -1;
+//        }
         new_res = (struct addrinfo *)calloc(1, sizeof(struct addrinfo)
                 + sizeof(struct sockaddr_in));
 

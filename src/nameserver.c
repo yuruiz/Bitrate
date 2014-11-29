@@ -210,7 +210,7 @@ int main(int argc, char const* argv[]) {
             rcode = 3;
             res = "0.0.0.0";
         }
-        dns_logging(&cli_addr, name, res);
+      //  dns_logging(&cli_addr, name, res);
 
         // initiate response
         ret = initDNSResponse(&res_message, &req_message, rcode, res, buf);
