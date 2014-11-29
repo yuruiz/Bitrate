@@ -1,6 +1,5 @@
 #include <string.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "nameserver.h"
@@ -34,6 +33,27 @@ int getNode(dns_server_t *ns, char *name) {
         }
     }
     return initNode(ns, name);
+}
+
+/**
+* format a.b.c.d : 1a1b1c1d
+*/
+void parse_name(char *name, int len, char *des) {
+    int i = 0, j;
+    char cnt;
+    while (i < len) {
+        cnt = name[i];
+        if (cnt == 0) {
+            des[i - 1] = 0;
+            break;
+        }
+        for (j = 0; j < cnt; j++) {
+            des[i+j] = name[i+j+1];
+        }
+        des[i+j] = '.';
+        i += cnt + 1;
+    }
+    return;
 }
 
 int parse_nodes(const char *filename) {
@@ -89,9 +109,51 @@ int parse_LSAs(const char *filename) {
     return 0;
 }
 
+/**
+* OSPF shortest path algorithm function
+*/
+const char* dijkstra(char *client){
+    int pos = -1, m, n, i, nf = 0, ne = 1, neighbor;
+    int visit[MAX_NODE];
+    int node[MAX_NODE];
+
+    for (i = 0; i < ns.node_num; i++) {
+        visit[i] = 0;
+    }
+
+    // find the client node
+    for (m = 0; m < ns.node_num; m++) {
+        if(strncmp(client, ns.nodes[m].name, NAME_LEN - 1) == 0) {
+            pos = m;
+        }
+    }
+    if(pos == -1){
+        fprintf(stderr, "no such client\n");
+        return NULL;
+    }
+    visit[pos] = 1;
+    node[0] = pos;
+
+    while(nf < ne){
+        n = node[nf++];
+        for (i = 0; i < ns.nodes[n].count; i++) {
+            neighbor = ns.nodes[n].node_pos[i];
+            if(!visit[neighbor]){
+                node[ne++] = neighbor;
+                if( ns.nodes[neighbor].is_server ){
+                    return ns.nodes[neighbor].name;
+                }
+                visit[neighbor] = 1;
+            }
+        }
+    }
+    fprintf(stderr, "not found\n");
+    return NULL;
+}
+
 int main(int argc, char const* argv[]) {
     ssize_t ret;
-    const char *res;
+    const char *res, *client;
     char rcode, buf[PACKET_LEN], name[255];
     struct sockaddr_in cli_addr;
     socklen_t addrlen;
@@ -100,7 +162,7 @@ int main(int argc, char const* argv[]) {
     ns.rr = (argc == 7) ? 0:-1;
 
     // parse parameters
-    loginit(argv[ns.rr + 2]);
+    dns_loginit(argv[ns.rr + 2]);
     inet_aton(argv[ns.rr + 3], & ns.addr.sin_addr);
     ns.addr.sin_port = htons(atoi(argv[ns.rr + 4]));
     ns.addr.sin_family = AF_INET;
@@ -130,6 +192,30 @@ int main(int argc, char const* argv[]) {
             continue;
         }
         decode(&req_message, buf, ret);
+        parse_name(req_message.req.qname, req_message.req.qname_len, name);
 
+        // look up for a server
+        if (strcmp(name, SERVER_NAME) == 0) {
+            client = inet_ntoa(cli_addr.sin_addr);
+
+            // round robin or dijkstra
+            if (ns.rr != -1) {
+                res = (const char*) ns.nodes[ns.rr].name;
+                ns.rr = (ns.rr + 1) % ns.node_num;
+            } else {
+                res = dijkstra(client);
+            }
+            rcode = 0;
+        } else {
+            rcode = 3;
+            res = "0.0.0.0";
+        }
+        dns_logging(&cli_addr, name, res);
+
+        // initiate response
+        ret = initDNSResponse(&res_message, &req_message, rcode, res, buf);
+
+        // send
+        sendto(ns.sock, buf, ret, 0, (struct sockaddr *) &cli_addr, addrlen);
     }
 }

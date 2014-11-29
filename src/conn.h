@@ -142,6 +142,8 @@ void conn_handle(pool *p);
 
 int initDNSRequest(dns_message_t *m, const char *name, void *encodedBuf);
 
+int initDNSResponse(dns_message_t *response, dns_message_t *req, char rcode, const char *res, void *encodedBuf);
+
 int decode(dns_message_t *m, void *buf, ssize_t len);
 
 int encode(dns_message_t *m, void *encodedBuf);

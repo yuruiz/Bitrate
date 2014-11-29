@@ -4,7 +4,8 @@
 
 typedef struct proxy {
     struct sockaddr_in myaddr;
-    struct sockaddr_in toaddr;
+    char *dns_ip;
+    char *dns_port;
 } proxy_t;
 
 char* getfakeip();

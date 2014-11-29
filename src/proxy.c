@@ -29,7 +29,7 @@ double getAlpha(){
 
 int main(int argc, char *argv[]) {
     int http_port;
-    char *log_file, *dns_ip, *dns_port;
+    char *log_file;
     int http_listen_socket, http_client_sock;
     struct sockaddr_in http_addr, cli_addr;
     socklen_t conn_size;
@@ -44,8 +44,8 @@ int main(int argc, char *argv[]) {
     alpha = atof(argv[2]);
     http_port = atoi(argv[3]);
     fake_ip = argv[4];
-    dns_ip = argv[5];
-    dns_port = argv[6];
+    proxy.dns_ip = argv[5];
+    proxy.dns_port = argv[6];
 
     if (argc == 8) {
         www_ip = argv[7];

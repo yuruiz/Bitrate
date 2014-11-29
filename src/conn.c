@@ -6,7 +6,7 @@
 #include "response.h"
 #include "bitrate.h"
 
-
+extern proxy_t proxy;
 void init_pool(int http_fd, pool *p) {
 
     p->list_head = NULL;
@@ -123,11 +123,18 @@ int openserverfd(conn_node* node) {
 
 
     if (www_ip == NULL) {
-//        if (resolve("video.cs.cmu.edu", "8080", NULL, &server_info) != 0) {
-//            fprintf(stderr, "getaddrinfo error in proxy_process\n");
-//            exit(-1);
-//        }
-        return -1;
+        if(init_mydns(proxy.dns_ip, atoi(proxy.dns_port)) < 0){
+            fprintf(stderr, "Init DNS failed\n");
+            return -1;
+        }
+        if (resolve("video.cs.cmu.edu", "8080", NULL, &server_info) != 0) {
+            fprintf(stderr, "resolve failed\n");
+            return -1;
+        }
+        if (server_info == NULL) {
+            fprintf(stderr, "no such server\n");
+            return -1;
+        }
     } else {
         char *server_ip = www_ip;
         char *server_port = "8080";
@@ -420,7 +427,7 @@ int initDNSRequest(dns_message_t *m, const char *name, void *encodedBuf) {
     strncpy(buf, name, strlen(name));
     str = buf;
 
-    // parse name, replace '.' with length
+    // parse name, replace '.' with length, thread safety
     while ((tok = strtok_r(str, ".", &saveptr)) != NULL) {
         len = (char)strlen(tok);
         qptr->qname[qptr->qname_len] = len;
@@ -430,8 +437,44 @@ int initDNSRequest(dns_message_t *m, const char *name, void *encodedBuf) {
     }
     qptr->qname_len++;
     m->length = sizeof(dns_header_t) + qptr->qname_len + sizeof(qptr->qtype) + sizeof(qptr->qclass);
+
+    // encode
     encode(m, encodedBuf);
     return m->length;
+}
+
+int initDNSResponse(dns_message_t *response, dns_message_t *req, char rcode, const char *res, void *encodedBuf) {
+    dns_res_t *aptr;
+    dns_req_t *qptr;
+    size_t ap_len;
+    size_t qp_len;
+
+    // header
+    memset(&response->header, 0, sizeof(dns_header_t));
+    response->header.id = req->header.id;
+    response->header.flag |= 1 << 15; // QA
+    response->header.flag |= 1 << 10; // AA
+    response->header.flag |= rcode;
+    response->header.qdcount = 1;
+    response->header.ancount = 1;
+
+    // build response
+    aptr = &response->res;
+    qptr = &req->req;
+    aptr->name_len = qptr->qname_len;
+    memcpy(aptr->name, qptr->qname, aptr->name_len);
+    aptr->type = 1;
+    aptr->class = 1;
+    aptr->rdlength = sizeof(aptr->rdata);
+    inet_aton(res, &aptr->rdata);
+    memcpy(&response->req, qptr, sizeof(*qptr));
+    ap_len = aptr->name_len + sizeof(aptr->type) + sizeof(aptr->class) + sizeof(aptr->ttl) + sizeof(aptr->rdlength) + aptr->rdlength;
+    qp_len = qptr->qname_len + sizeof(qptr->qtype) + sizeof(qptr->qclass);
+    response->length = sizeof(dns_header_t) + ap_len + qp_len;
+
+    // encode
+    encode(response, encodedBuf);
+    return response->length;
 }
 
 /**
