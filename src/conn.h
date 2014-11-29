@@ -36,8 +36,8 @@ typedef struct dns_header {
 typedef struct dns_req {
     int qname_len;
     char qname[255];
-    uint16_t qclass;
     uint16_t qtype;
+    uint16_t qclass;
 } dns_req_t;
 
 /**
@@ -46,9 +46,9 @@ typedef struct dns_req {
 typedef struct dns_res {
     int name_len;
     char name[255];
-    int32_t ttl;
     uint16_t type;
     uint16_t class;
+    int32_t ttl;
     uint16_t rdlength;
     struct in_addr rdata; // class A
 } dns_res_t;
