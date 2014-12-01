@@ -9,7 +9,7 @@ NS_OBJS     = nameserver.o log.o mydns.o
 SOURCE=src
 VPATH=$(SOURCE)
 
-BINS            = proxy nameserver
+BINS          = proxy nameserver
 
 # Implicit .o target
 .c.o:
@@ -21,10 +21,13 @@ all: ${BINS}  clean_obj
 
 
 run_1:
-	./proxy log_101.txt 0.1 15641 1.0.0.1 127.0.0.1 15441 3.0.0.1
+	./proxy log_101.txt 0.1 15641 1.0.0.1 127.0.0.1 15441
 
 run_2:
-	./proxy log_201.txt 0.1 15741 2.0.0.1 127.0.0.1 15441 4.0.0.1
+	./proxy log_201.txt 0.1 15741 2.0.0.1 127.0.0.1 15441
+
+dns_server:
+	./nameserver -r log_DNS.txt 5.0.0.1 15441 ./topos/topo1/topo1.servers ./topos/topo1/topo1.lsa
 
 
 spiffy:
