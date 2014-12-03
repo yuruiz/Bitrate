@@ -309,7 +309,7 @@ int processResp(conn_node *cur_node, pool *p) {
         }
 
         /*read the response content*/
-        n = recv(cur_node->serverfd, resStatus->content + resStatus->rec_len, left, MSG_DONTWAIT);
+        n = httpreadline(cur_node->serverfd, resStatus->content + resStatus->rec_len, left);
 
         if (n == 0) {
             free(resStatus->content);
