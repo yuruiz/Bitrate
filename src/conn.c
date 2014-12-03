@@ -261,7 +261,7 @@ int processResp(conn_node *cur_node, pool *p) {
     ssize_t n;
 
     if (resStatus->curStatus == HEADER) {
-//        printf("Start processing response header\n");
+        printf("Start processing response header\n");
         /*Parse the response header*/
         if((resStatus->hdsize = parseServerHd(cur_node, resStatus)) <= 0) {
 
@@ -278,6 +278,9 @@ int processResp(conn_node *cur_node, pool *p) {
         }
 
 
+        printf("Contentlen is %d\n", resStatus->contentlen);
+
+
         if (resStatus->contentlen > 0) {
             resStatus->curStatus = PAYLOAD;
         }else{
@@ -291,7 +294,7 @@ int processResp(conn_node *cur_node, pool *p) {
             }
         }
 
-//        printf("Processing response header finished\n");
+        printf("Processing response header finished\n");
     }
     else {
 

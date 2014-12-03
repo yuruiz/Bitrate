@@ -71,7 +71,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     while((linesize = httpreadline(node->serverfd, linebuf, MAXLINE)) > 0) {
         hdsize += linesize;
-//        printf("%s", linebuf);
+        printf("%s", linebuf);
 
         if (hdsize > MAXLINE) {
             printf("Header too long to fit in buffer\n");
@@ -80,19 +80,20 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
         strcat(resStatus->buf, linebuf);
         if (strstr(resStatus->buf, "\r\n\r\n") != NULL) {
-//            printf("Finishe reading response header\n");
-            break;
+            printf("Finish reading response header\n");
+            printf("Getting Content Length %d\n", (int)resStatus->contentlen);
+            return hdsize;
         }
 
-        if (strstr(linebuf, "Content-Length")) {
-            sscanf(linebuf, "Content-Length: %d", &resStatus->contentlen);
+        if (strstr(linebuf, "Content-Length:") != NULL) {
+            sscanf(linebuf, "Content-Length: %d", (int*)&(resStatus->contentlen));
             if (resStatus->content != NULL) {
                 printf("Fatal error in server header parse, the content hasbeen allocated\n");
                 return -1;
             }
 
             resStatus->content = malloc(resStatus->contentlen * sizeof(char));
-            memset(resStatus, 0, resStatus->contentlen * sizeof(char));
+            memset(resStatus->content, 0, resStatus->contentlen * sizeof(char));
         }
 
         memset(linebuf, 0, MAXLINE);
