@@ -193,7 +193,7 @@ int processReq(conn_node *cur_node, pool *p) {
     char linebuf[MAXLINE];
     int n, connectionfound = 0;
 
-    fprintf(stderr,"Start request processing\n");
+//    fprintf(stderr,"Start request processing\n");
 
     memset(linebuf, 0, MAXLINE);
 
@@ -228,7 +228,7 @@ int processReq(conn_node *cur_node, pool *p) {
         return -1;
     }
 
-    fprintf(stderr,"%s", buf);
+//    fprintf(stderr,"%s", buf);
 
     /*parse the request line*/
     if (parse_uri(buf, &cur_node->request_status) < 0) {
@@ -341,8 +341,8 @@ int processResp(conn_node *cur_node, pool *p) {
 
         resStatus->rec_len += n;
 
-        fprintf(stderr, "The content length is %d\n", resStatus->contentlen);
-        fprintf(stderr, "The content received is %d\n", resStatus->rec_len);
+//        fprintf(stderr, "The content length is %d\n", resStatus->contentlen);
+//        fprintf(stderr, "The content received is %d\n", resStatus->rec_len);
 
         if (resStatus->rec_len < resStatus->contentlen) {
             return 0;

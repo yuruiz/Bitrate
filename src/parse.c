@@ -71,7 +71,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     while((linesize = httpreadline(node->serverfd, linebuf, MAXLINE)) > 0) {
         hdsize += linesize;
-        fprintf(stderr,"%s", linebuf);
+//        fprintf(stderr,"%s", linebuf);
 
         if (hdsize > MAXLINE) {
             printf("Header too long to fit in buffer\n");
