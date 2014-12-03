@@ -14,9 +14,9 @@ int parse_uri(char* buf, req_status* req) {
     req->firstlen = bufreadline(buf, req->reqlen, linebuf, MAXLINE);
 
     if (sscanf(linebuf, "%s %s %s", method, uri, req->version) != 3) {
-        printf("Parse request first line error\n");
-        printf("The line length is %d\n", req->firstlen);
-        printf("%s", linebuf);
+        fprintf(stderr,"Parse request first line error\n");
+        fprintf(stderr,"The line length is %d\n", req->firstlen);
+        fprintf(stderr,"%s", linebuf);
         return -1;
     }
 
@@ -71,7 +71,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     while((linesize = httpreadline(node->serverfd, linebuf, MAXLINE)) > 0) {
         hdsize += linesize;
-        printf("%s", linebuf);
+        fprintf(stderr,"%s", linebuf);
 
         if (hdsize > MAXLINE) {
             printf("Header too long to fit in buffer\n");
@@ -80,15 +80,15 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
         strcat(resStatus->buf, linebuf);
         if (strstr(resStatus->buf, "\r\n\r\n") != NULL) {
-            printf("Finish reading response header\n");
-            printf("Getting Content Length %d\n", (int)resStatus->contentlen);
+            fprintf(stderr,"Finish reading response header\n");
+            fprintf(stderr,"Getting Content Length %d\n", resStatus->contentlen);
             return hdsize;
         }
 
         if (strstr(linebuf, "Content-Length:") != NULL) {
-            sscanf(linebuf, "Content-Length: %d", (int*)&(resStatus->contentlen));
+            sscanf(linebuf, "Content-Length: %d", &(resStatus->contentlen));
             if (resStatus->content != NULL) {
-                printf("Fatal error in server header parse, the content hasbeen allocated\n");
+                fprintf(stderr,"Fatal error in server header parse, the content hasbeen allocated\n");
                 return -1;
             }
 
@@ -100,7 +100,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
     }
 
     if (linesize <= 0) {
-        printf("Reading response error\n");
+        fprintf(stderr,"Reading response error\n");
 //        printf("%s", resStatus->buf);
         return linesize;
     }

@@ -29,7 +29,7 @@ double getAlpha(){
 }
 
 int main(int argc, char *argv[]) {
-     printf("Proxy Start yuruiz\n");
+     fprintf(stderr,"Proxy Start yuruiz\n");
      int http_port;
      char *log_file;
      int http_listen_socket, http_client_sock;
@@ -55,11 +55,11 @@ int main(int argc, char *argv[]) {
 
      loginit(log_file);
 
-     printf("-------------------Server Start------------------\n");
+     fprintf(stderr,"-------------------Server Start------------------\n");
 
 
      if ((http_listen_socket = open_port(http_port, &http_addr)) == -1) {
-         printf("Open port failed\n");
+         fprintf(stderr,"Open port failed\n");
          return EXIT_FAILURE;
      }
 
@@ -78,9 +78,9 @@ int main(int argc, char *argv[]) {
          conn_size = sizeof(cli_addr);
 
          if (FD_ISSET(http_listen_socket, &conn_pool.ready_set)) {
-             printf("Adding new http connection\n");
+             fprintf(stderr,"Adding new http connection\n");
              if ((http_client_sock = accept(http_listen_socket, (struct sockaddr *) &cli_addr, &conn_size)) == -1) {
-                 printf("Error accepting http connection.\n");
+                 fprintf(stderr,"Error accepting http connection.\n");
                  continue;
              }
              add_conn(http_client_sock, &conn_pool, &cli_addr);

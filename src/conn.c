@@ -191,7 +191,7 @@ int processReq(conn_node *cur_node, pool *p) {
     char linebuf[MAXLINE];
     int n;
 
-//    printf("Start request processing\n");
+    fprintf(stderr,"Start request processing\n");
 
     memset(linebuf, 0, MAXLINE);
 
@@ -200,7 +200,7 @@ int processReq(conn_node *cur_node, pool *p) {
         cur_node->request_status.reqlen += n;
 
         if (cur_node->request_status.reqlen > MAXLINE) {
-            printf("Request Header is too large to fit in buffer\n");
+            fprintf(stderr,"Request Header is too large to fit in buffer\n");
             return -1;
         }
 
@@ -222,7 +222,7 @@ int processReq(conn_node *cur_node, pool *p) {
 
     /*parse the request line*/
     if (parse_uri(buf, &cur_node->request_status) < 0) {
-        printf("Parse the request error\n");
+        fprintf(stderr,"Parse the request error\n");
         printf("%s", buf);
         return -1;
     }
@@ -230,7 +230,7 @@ int processReq(conn_node *cur_node, pool *p) {
     /*create the server socket if it has not been created*/
     if (cur_node->serverfd < 0) {
         if ((cur_node->serverfd = openserverfd(cur_node)) <= 0) {
-            printf("Create connection to server failed\n");
+            fprintf(stderr,"Create connection to server failed\n");
             return -1;
         }
 
@@ -238,7 +238,7 @@ int processReq(conn_node *cur_node, pool *p) {
         if (cur_node->serverfd > p->maxfd) {
             p->maxfd = cur_node->serverfd;
         }
-        printf("Adding server at fd %d\n", cur_node->serverfd);
+        fprintf(stderr,"Adding server at fd %d\n", cur_node->serverfd);
     }
 
     /*send the request to server*/
@@ -258,10 +258,10 @@ int processReq(conn_node *cur_node, pool *p) {
 int processResp(conn_node *cur_node, pool *p) {
 
     res_status *resStatus = &cur_node->response_status;
-    ssize_t n;
+    int n = 0, ret = 0;
 
     if (resStatus->curStatus == HEADER) {
-        printf("Start processing response header\n");
+        fprintf(stderr,"Start processing response header\n");
         /*Parse the response header*/
         if((resStatus->hdsize = parseServerHd(cur_node, resStatus)) <= 0) {
 
@@ -269,16 +269,17 @@ int processResp(conn_node *cur_node, pool *p) {
                 if (resStatus->content != NULL) {
                     free(resStatus->content);
                 }
-                printf("Connection Closed\n");
+                fprintf(stderr,"Connection Closed\n");
+                fprintf(stderr, "%s", resStatus->content);
                 return -1;
             }else {
-                printf("unable to read\n");
+                fprintf(stderr,"unable to read\n");
                 return 0;
             }
         }
 
 
-        printf("Contentlen is %d\n", resStatus->contentlen);
+//        printf("Contentlen is %d\n", resStatus->contentlen);
 
 
         if (resStatus->contentlen > 0) {
@@ -294,14 +295,15 @@ int processResp(conn_node *cur_node, pool *p) {
             }
         }
 
-        printf("Processing response header finished\n");
+        fprintf(stderr,"Processing response header finished\n");
     }
     else {
 
 
-//        printf("Start processing response payload\n");
+//        fprintf(stderr,"Start processing response payload\n");
 
-        size_t left = resStatus->contentlen - resStatus->rec_len;
+
+        int left = resStatus->contentlen - resStatus->rec_len;
 
         if (resStatus->contentlen <= resStatus->rec_len) {
             free(resStatus->content);
@@ -309,17 +311,28 @@ int processResp(conn_node *cur_node, pool *p) {
         }
 
         /*read the response content*/
-        n = httpreadline(cur_node->serverfd, resStatus->content + resStatus->rec_len, left);
+//        n = httpreadline(cur_node->serverfd, resStatus->content + resStatus->rec_len, left);
+//        n = read(cur_node->serverfd, resStatus->content + resStatus->rec_len, left);
+        n = recv(cur_node->serverfd, resStatus->content + resStatus->rec_len, left, MSG_DONTWAIT);
 
         if (n == 0) {
-            free(resStatus->content);
-            printf("Read Response payload error %d\n", n);
-            return -1;
-        }else if (n == -1) {
+            if (resStatus->rec_len == 0) {
+                fprintf(stderr, "%s", resStatus->content);
+                free(resStatus->content);
+                fprintf(stderr, "Read Response payload error %d\n", n);
+                return -1;
+            }
+
+            ret = -1;
+
+        } else if (n == -1) {
             return 0;
         }
 
         resStatus->rec_len += n;
+
+        fprintf(stderr, "The content length is %d\n", resStatus->contentlen);
+        fprintf(stderr, "The content received is %d\n", resStatus->rec_len);
 
         if (resStatus->rec_len < resStatus->contentlen) {
             return 0;
@@ -330,7 +343,7 @@ int processResp(conn_node *cur_node, pool *p) {
         req_t *req = (req_t *) dequeue(cur_node->reqq);
 
         if (req == NULL) {
-            printf("ERROR! reqest records empty!\n ");
+            fprintf(stderr, "ERROR! reqest records empty!\n ");
             free(resStatus->content);
             return -1;
         }
@@ -339,7 +352,7 @@ int processResp(conn_node *cur_node, pool *p) {
         struct timeval curT;
         switch (req->reqtype) {
             case MANIFEST:
-                printf("Manifest response received\n");
+                fprintf(stderr, "Manifest response received\n");
                 break;
             case VIDEO:
 //                printf("Video response received\n");
@@ -354,7 +367,7 @@ int processResp(conn_node *cur_node, pool *p) {
                 writelen = send(cur_node->clientfd, resStatus->content, resStatus->contentlen, 0);
                 break;
             default:
-                printf("Error! unknow request record\n");
+                fprintf(stderr, "Error! unknow request record\n");
                 return -1;
         }
 
@@ -362,7 +375,7 @@ int processResp(conn_node *cur_node, pool *p) {
 
 
         if (req->reqtype != MANIFEST && writelen != resStatus->contentlen) {
-            printf("Sending response to client error\n");
+            fprintf(stderr, "Sending response to client error\n");
             free(req);
             free(resStatus->content);
             return -1;
@@ -374,10 +387,10 @@ int processResp(conn_node *cur_node, pool *p) {
 
         initResStatus(resStatus);
 
-        printf("Processing response payload finished\n");
+        fprintf(stderr, "Processing response payload finished\n");
     }
 
-    return 0;
+    return ret;
 }
 
 void conn_handle(pool *p) {
