@@ -94,6 +94,8 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
             resStatus->content = malloc(resStatus->contentlen * sizeof(char));
             memset(resStatus->content, 0, resStatus->contentlen * sizeof(char));
+        } else if (strstr(linebuf, "Connection: close") != NULL) {
+            resStatus->conn_close = 1;
         }
 
         memset(linebuf, 0, MAXLINE);

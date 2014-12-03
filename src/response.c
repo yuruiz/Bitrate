@@ -5,11 +5,11 @@
 
 int sendRequset(conn_node *node, req_status *reqStatus){
     char req[MAXLINE];
-    char reqOrigin[MAXLINE];
+//    char reqOrigin[MAXLINE];
     req_t *reqRecord;
 
     memset(req, 0, MAXLINE);
-    memset(reqOrigin, 0, MAXLINE);
+//    memset(reqOrigin, 0, MAXLINE);
 
     char* header = reqStatus->buf + reqStatus->firstlen;
 
@@ -19,7 +19,7 @@ int sendRequset(conn_node *node, req_status *reqStatus){
 //            printf("Building manifest request\n");
             *(reqStatus->resloc) = 0;
             sprintf(req,"GET %sbig_buck_bunny_nolist.f4m %s",reqStatus->uri, reqStatus->version);
-            sprintf(reqOrigin,"GET %sbig_buck_bunny.f4m %s",reqStatus->uri, reqStatus->version);
+//            sprintf(reqOrigin,"GET %sbig_buck_bunny.f4m %s",reqStatus->uri, reqStatus->version);
             reqRecord->reqtype = OTHER;
             break;
         case VIDEO:
@@ -43,21 +43,21 @@ int sendRequset(conn_node *node, req_status *reqStatus){
     }
 
 
-    if (reqStatus->reqtype == MANIFEST) {
-        if(strstr(reqOrigin,"\r\n")==NULL){
-            strcat(reqOrigin,"\r\n");
-        }
-        strcat(reqOrigin, header);
-        size_t reqlen = strlen(reqOrigin);
-        if (write(node->serverfd, reqOrigin, reqlen) != reqlen) {
-            printf("sending request error\n");
-            return -1;
-        }
-
-        req_t *reqR = malloc(sizeof(req_t));
-        reqR->reqtype = MANIFEST;
-        enqueue(node->reqq, (void *) reqR);
-    }
+//    if (reqStatus->reqtype == MANIFEST) {
+//        if(strstr(reqOrigin,"\r\n")==NULL){
+//            strcat(reqOrigin,"\r\n");
+//        }
+//        strcat(reqOrigin, header);
+//        size_t reqlen = strlen(reqOrigin);
+//        if (write(node->serverfd, reqOrigin, reqlen) != reqlen) {
+//            printf("sending request error\n");
+//            return -1;
+//        }
+//
+//        req_t *reqR = malloc(sizeof(req_t));
+//        reqR->reqtype = MANIFEST;
+//        enqueue(node->reqq, (void *) reqR);
+//    }
 
 
     if(strstr(req,"\r\n")==NULL){

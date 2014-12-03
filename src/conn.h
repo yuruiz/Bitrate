@@ -37,6 +37,7 @@ typedef struct{
     int contentlen;
     ssize_t hdsize;
     int rec_len;
+    int conn_close;
     char buf[MAXLINE];
     char* content;
 } res_status;

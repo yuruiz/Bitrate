@@ -62,6 +62,7 @@ void initResStatus(res_status *resStatus){
     resStatus->curStatus = HEADER;
     resStatus->content = NULL;
     resStatus->hdsize = 0;
+    resStatus->conn_close = 0;
 
     memset(resStatus->buf, 0, MAXLINE);
 }
@@ -205,18 +206,18 @@ int processReq(conn_node *cur_node, pool *p) {
             return -1;
         }
 
-        if(strstr(linebuf, "Connection:") != NULL) {
-            connectionfound = 1;
-            strcat(buf, "Connection: Keep-Alive\r\n");
-        }else{
-            strcat(buf, linebuf);
-        }
+//        if(strstr(linebuf, "Connection:") != NULL) {
+//            connectionfound = 1;
+//            strcat(buf, "Connection: Keep-Alive\r\n");
+//        }else{
+        strcat(buf, linebuf);
+//        }
         memset(linebuf, 0, MAXLINE);
 
-        if ((endbuf= strstr(buf, "\r\n\r\n")) != NULL) {
-            if (connectionfound == 0) {
-                memcpy(endbuf, "Connection: Keep-Alive\r\n\r\n", strlen("Connection: Keep-Alive\r\n\r\n"));
-            }
+        if (strstr(buf, "\r\n\r\n") != NULL) {
+//            if (connectionfound == 0) {
+//                memcpy(endbuf, "\r\nConnection: Keep-Alive\r\n\r\n", strlen("\r\nConnection: Keep-Alive\r\n\r\n"));
+//            }
             break;
         }
     }
@@ -227,7 +228,7 @@ int processReq(conn_node *cur_node, pool *p) {
         return -1;
     }
 
-//    printf("%s", buf);
+    fprintf(stderr,"%s", buf);
 
     /*parse the request line*/
     if (parse_uri(buf, &cur_node->request_status) < 0) {
@@ -393,6 +394,12 @@ int processResp(conn_node *cur_node, pool *p) {
 //        printf("Start cleaning\n");
         free(req);
         free(resStatus->content);
+
+        if (resStatus->conn_close == 1) {
+            close(cur_node->serverfd);
+            FD_CLR(cur_node->serverfd, &p->read_set);
+            cur_node->serverfd = -1;
+        }
 
         initResStatus(resStatus);
 
