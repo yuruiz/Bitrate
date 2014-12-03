@@ -91,7 +91,8 @@ int parseServerHd(conn_node* node, res_status *resStatus){
                 return -1;
             }
 
-            resStatus->content = calloc(resStatus->contentlen,sizeof(char));
+            resStatus->content = malloc(resStatus->contentlen * sizeof(char));
+            memset(resStatus, 0, resStatus->contentlen * sizeof(char));
         }
 
         memset(linebuf, 0, MAXLINE);
@@ -99,7 +100,7 @@ int parseServerHd(conn_node* node, res_status *resStatus){
 
     if (linesize <= 0) {
         printf("Reading response error\n");
-        printf("%s", resStatus->buf);
+//        printf("%s", resStatus->buf);
         return linesize;
     }
 

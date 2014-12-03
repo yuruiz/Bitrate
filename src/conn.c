@@ -292,18 +292,28 @@ int processResp(conn_node *cur_node, pool *p) {
         }
 
 //        printf("Processing response header finished\n");
-    }else {
+    }
+    else {
 
 
 //        printf("Start processing response payload\n");
 
         size_t left = resStatus->contentlen - resStatus->rec_len;
 
+        if (resStatus->contentlen <= resStatus->rec_len) {
+            free(resStatus->content);
+            return -1;
+        }
+
         /*read the response content*/
-        if ((n = read(cur_node->serverfd, resStatus->content + resStatus->rec_len, left)) <= 0) {
+        n = recv(cur_node->serverfd, resStatus->content + resStatus->rec_len, left, MSG_DONTWAIT);
+
+        if (n == 0) {
             free(resStatus->content);
             printf("Read Response payload error %d\n", n);
             return -1;
+        }else if (n == -1) {
+            return 0;
         }
 
         resStatus->rec_len += n;
@@ -361,7 +371,7 @@ int processResp(conn_node *cur_node, pool *p) {
 
         initResStatus(resStatus);
 
-//        printf("Processing response payload finished\n");
+        printf("Processing response payload finished\n");
     }
 
     return 0;
