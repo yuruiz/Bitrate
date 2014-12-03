@@ -188,8 +188,9 @@ void closeConnection(conn_node* node, pool *p){
 int processReq(conn_node *cur_node, pool *p) {
 
     char* buf = cur_node->request_status.buf;
+    char* endbuf;
     char linebuf[MAXLINE];
-    int n;
+    int n, connectionfound = 0;
 
     fprintf(stderr,"Start request processing\n");
 
@@ -204,10 +205,18 @@ int processReq(conn_node *cur_node, pool *p) {
             return -1;
         }
 
-        strcat(buf, linebuf);
+        if(strstr(linebuf, "Connection:") != NULL) {
+            connectionfound = 1;
+            strcat(buf, "Connection: Keep-Alive\r\n");
+        }else{
+            strcat(buf, linebuf);
+        }
         memset(linebuf, 0, MAXLINE);
 
-        if (strstr(buf, "\r\n\r\n") != NULL) {
+        if ((endbuf= strstr(buf, "\r\n\r\n")) != NULL) {
+            if (connectionfound == 0) {
+                memcpy(endbuf, "Connection: Keep-Alive\r\n\r\n", strlen("Connection: Keep-Alive\r\n\r\n"));
+            }
             break;
         }
     }
