@@ -42,7 +42,7 @@ void logging(float duration, float tput, float avg_tput, int bitrate, char *clie
 
 }
 
-void dns_logging(struct sockaddr_in *addr, char *qname, char *res) {
+void dns_logging(struct sockaddr_in *addr, const char *qname, const char *res) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     fprintf(_dns_logfd, "%.3f %s %s %s\n",
@@ -51,4 +51,5 @@ void dns_logging(struct sockaddr_in *addr, char *qname, char *res) {
             qname,
             res);
     fflush(_dns_logfd);
+    return;
 }

@@ -44,6 +44,7 @@ int resolve(const char *node, const char *service,
     struct sockaddr_in * sa_in;
 
     if ((ret = initDNSRequest(&req_message, node, buf)) < 0) {
+        fprintf(stderr, "create dns question failed\n");
         return -1;
     }
 
@@ -72,10 +73,7 @@ int resolve(const char *node, const char *service,
             fprintf(stderr, "decode failed\n");
             return -1;
         }
-//        if (req_message.header.id != res_message.header.id) {
-//            fprintf(stderr, "response id not match\n");
-//            return -1;
-//        }
+
         new_res = (struct addrinfo *)calloc(1, sizeof(struct addrinfo)
                 + sizeof(struct sockaddr_in));
 

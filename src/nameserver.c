@@ -20,7 +20,6 @@ int initNode(dns_server_t *ns, char *name) {
     nd->name[NAME_LEN - 1] = '\0';
 
     nd->version = -1;
-    //memset(nd->node_pos, 0, sizeof(nd->node_pos));
     nd->count = 0;
     return pos;
 }
@@ -210,7 +209,7 @@ int main(int argc, char const* argv[]) {
             rcode = 3;
             res = "0.0.0.0";
         }
-      //  dns_logging(&cli_addr, name, res);
+        dns_logging(&cli_addr, name, res);
 
         // initiate response
         ret = initDNSResponse(&res_message, &req_message, rcode, res, buf);
